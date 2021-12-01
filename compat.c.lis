@@ -1,0 +1,510 @@
+1     0000              MODULE compat_c
+2     0000              LINE 0, "compat.c"
+0     0000              
+1     0000              ;* * * * *  Small-C/Plus z88dk * * * * *
+2     0000              ;  Version: 18895-a94ab5b30-20211127
+3     0000              ;
+4     0000              ;	Reconstructed for z80 Module Assembler
+5     0000              ;
+6     0000              ;	Module compile time: Wed Dec  1 17:43:35 2021
+7     0000              
+8     0000              
+9     0000              	C_LINE	0,"compat.c"
+0     0000              
+0     0000              	MODULE	compat_c
+0     0000              
+0     0000              
+0     0000              	INCLUDE "z80_crt0.hdr"
+1     0000              ;
+2     0000              ;	Header file which contains all required variables from the
+3     0000              ;	startup that need to be exposed to individual C files
+4     0000              ;
+5     0000              ;	Stick in this file any routines which are needed or implicitly
+6     0000              ;	implied by sccz80.
+7     0000              ;
+8     0000              ;	This file is included by every module
+9     0000              ;	To handle multi module programs which use floating point
+10    0000              ;	routines in different modules, we have got rid of
+11    0000              ;	the conditional assembly around the float routines
+12    0000              ;
+13    0000              ;	$Id: z80_crt0.hdr,v 1.12 2015-11-24 06:47:17 stefano Exp $
+14    0000              
+15    0000              	EXTERN	base_graphics	; Address of graphics screen
+16    0000              
+17    0000              	EXTERN	_cpfar2near	; Far->near conversion (z88)
+18    0000              	EXTERN	packintrout	; Process interrupt (z88 apps)
+19    0000              
+20    0000              	EXTERN	l_dcal		; jp(hl)
+21    0000              	EXTERN	cleanup		; cleanup before program exit
+22    0000              
+23    0000              
+24    0000              	EXTERN	l_jphl	   ; another jp(hl)
+25    0000              	EXTERN	l_jpix	   ; jp(ix)
+26    0000              	EXTERN	l_jpiy	   ; jp(iy)
+27    0000              
+28    0000              	EXTERN	l_ldi
+29    0000              	EXTERN	l_ldi_128
+30    0000              	EXTERN	l_ldi_256
+31    0000              
+32    0000              	EXTERN	l_outi
+33    0000              	EXTERN	l_outi_128
+34    0000              	EXTERN	l_outi_256
+35    0000              
+36    0000              	EXTERN	l_ini
+37    0000              	EXTERN	l_ini_128
+38    0000              	EXTERN	l_ini_256
+39    0000              	EXTERN	l_ini_512
+40    0000              
+41    0000              
+42    0000              	; Used for banked calls for __banked for sccz80 + sdcc
+43    0000              	EXTERN	banked_call
+44    0000              
+45    0000              
+46    0000              ;------------------------------------
+47    0000              ; Scopes for integer library routines
+48    0000              ;------------------------------------
+49    0000              
+50    0000              	EXTERN    l_getptr	;Get 3 byte pointer
+51    0000              	EXTERN    l_putptr	;Put 3 byte pointer
+52    0000              	EXTERN    l_gchar	;Get signed char
+53    0000              	EXTERN    l_gcharsp	;Get signed char  (peephole opt)
+54    0000              	EXTERN    l_gcharspsp	;Get signed char and push  (peephole opt)
+55    0000              	EXTERN    l_g2charspsp	;Get 2 signed char and push  (peephole opt)
+56    0000              	EXTERN    l_sxt		;Sign extend char
+57    0000              	EXTERN    l_gint	;Get int ld hl,(hl)
+58    0000              	EXTERN    l_gintsp	;Get int (peephole opt)
+59    0000              	EXTERN    l_gintspchar	;Get int,char (peephole opt)
+60    0000              	EXTERN    l_gintspsp	;Get int and push (peephole opt)
+61    0000              	EXTERN    l_g2intspsp	;Get 2 int and push (peephole opt)
+62    0000              	EXTERN    l_gintsp2de	;Get int, multiply by 2 and add from SP by de
+63    0000              	EXTERN    l_gint7de	;Get int, multiply by 7 and add from SP by de
+64    0000              	EXTERN    l_gint_eq	;Get int and test == 0
+65    0000              	EXTERN    l_ghtonsint	;Get reverse order int
+66    0000              	EXTERN    l_pint	;Put int: ld (de),hl
+67    0000              	EXTERN    l_pint_eq	;Put int and test == 0
+68    0000              	EXTERN    l_pint_pop	;Put int and pop place address
+69    0000              	EXTERN    l_or		;Int logical or
+70    0000              	EXTERN    l_xor		;Int logical xor
+71    0000              	EXTERN    l_and		;Int logical and
+72    0000              	EXTERN    l_eq		;Int equality
+73    0000              	EXTERN    l_ne		;Int inequality
+74    0000              	EXTERN    l_gt		;Int signed de >  hl
+75    0000              	EXTERN    l_le		;Int signed de <= hl
+76    0000              	EXTERN    l_ge		;Int signed de >= hl
+77    0000              	EXTERN    l_lt		;Int signed de <  hl
+78    0000              	EXTERN    l_uge		;Int unsigned de >= hl
+79    0000              	EXTERN    l_ult		;Int unsigned de <  hl
+80    0000              	EXTERN    l_ugt		;Int unsigned de >  hl
+81    0000              	EXTERN    l_ule		;Int unsigned de <= hl
+82    0000              	EXTERN    l_cmp		;Int signed compare
+83    0000              	EXTERN    l_ucmp	;Int unsigned compare
+84    0000              	EXTERN    l_asr		;Int signed de >> hl
+85    0000              	EXTERN    l_asr_hl_by_e	;Int signed hl >> e
+86    0000              	EXTERN    l_asr_u	;Int unsigned de >> hl
+87    0000              	EXTERN    l_asr_u_hl_by_e	;Int unsigned hl >> e
+88    0000              	EXTERN    l_asl		;Int de << hl
+89    0000              	EXTERN    l_sub		;Int subtract hl = de - hl
+90    0000              	EXTERN    l_neg		;Int negate
+91    0000              	EXTERN    l_com		;Int ~
+92    0000              	EXTERN    l_lneg	;Int logical negate
+93    0000              	EXTERN    l_bool	;Int boolean test
+94    0000              	EXTERN    l_cm_de	;
+95    0000              	EXTERN    l_cm_bc
+96    0000              	EXTERN    l_deneg
+97    0000              	EXTERN    l_bcneg
+98    0000              	EXTERN    l_case	;Integer case
+99    0000              	EXTERN    l_mult	;Integer hl = hl * de
+100   0000              	EXTERN    l_div		;Integer signed / hl=de/hl, de=de%hl
+101   0000              	EXTERN    l_div_u	;Integer unsigned /
+102   0000              	EXTERN    l_mod		;Integer % (for gbz80) hl=de%hl
+103   0000              	EXTERN    l_mod_u	;Integer unsigned % (for gbz80)
+104   0000              
+105   0000              ;------------------
+106   0000              ;Long functions now
+107   0000              ;------------------
+108   0000              
+109   0000              	EXTERN	lpush2		;Push a long under the stack
+110   0000              	EXTERN	l_int2long_s	;Int->long signed conversion
+111   0000              	EXTERN	l_int2long_s_float	;Int->long->float signed conversion (optimizer: use -O3)
+112   0000              	EXTERN	l_int2long_u_float	;uInt->ulong->float signed conversion
+113   0000              	EXTERN	l_glong		;Get long
+114   0000              	EXTERN	l_glongsp	;Get long (peephole opt)
+115   0000              	EXTERN	l_glonghlp	;Get pointer, then get long
+116   0000              	EXTERN	l_glong2sp	;Get long and copy on stack (peephole opt)
+117   0000              	EXTERN	l_glong2sp_hlp
+118   0000              	EXTERN	l_long_add
+119   0000              	EXTERN	l_long_and
+120   0000              	EXTERN	l_long_asl
+121   0000              	EXTERN	l_long_asr
+122   0000              	EXTERN	l_long_aslo	;Long << shift in c
+123   0000              	EXTERN	l_long_asro	;Long >> shift in c (signed)
+124   0000              	EXTERN	l_long_bool
+125   0000              	EXTERN	l_long_cmp
+126   0000              	EXTERN	l_long_com
+127   0000              	EXTERN	l_long_eq
+128   0000              	EXTERN	l_long_ge
+129   0000              	EXTERN	l_long_gt
+130   0000              	EXTERN	l_long_le
+131   0000              	EXTERN	l_long_lneg
+132   0000              	EXTERN	l_long_lt
+133   0000              	EXTERN	l_long_ne
+134   0000              	EXTERN	l_long_neg
+135   0000              	EXTERN	l_long_or
+136   0000              	EXTERN	l_long_sub
+137   0000              	EXTERN	l_long_ucmp
+138   0000              	EXTERN	l_long_uge
+139   0000              	EXTERN	l_long_ugt
+140   0000              	EXTERN	l_long_ule
+141   0000              	EXTERN	l_long_ult
+142   0000              	EXTERN	l_long_xor
+143   0000              	EXTERN	l_plong
+144   0000              	EXTERN	l_inclong	;Increment long
+145   0000              	EXTERN	l_declong	;Decrement long
+146   0000              	EXTERN	l_long_div
+147   0000              	EXTERN	l_long_div_u
+148   0000              	EXTERN	l_long_mod
+149   0000              	EXTERN	l_long_mod_u
+150   0000              	EXTERN	l_long_mult
+151   0000              	EXTERN	l_long_asr_u	;Long unsigned >>
+152   0000              	EXTERN	l_long_asr_uo	;Long unsigned >> shift in c
+153   0000              	EXTERN	l_long_case
+154   0000              
+155   0000              ;--------------------------------------------------------------
+156   0000              ; Floating point support routines, mostly in library
+157   0000              ;--------------------------------------------------------------
+158   0000              
+159   0000              	EXTERN	dadd
+160   0000              	EXTERN	ddiv
+161   0000              	EXTERN	dsub
+162   0000              	EXTERN	dmul
+163   0000              
+164   0000              	EXTERN	dge
+165   0000              	EXTERN	dgt
+166   0000              	EXTERN	dleq
+167   0000              	EXTERN	dlt
+168   0000              	EXTERN	deq
+169   0000              	EXTERN	dne
+170   0000              
+171   0000              	EXTERN	minusfa		;FA=-FA
+172   0000              
+173   0000              	EXTERN	dswap		;Exchange FA with top of stack
+174   0000              	EXTERN	float		;Convert int to float
+175   0000              	EXTERN	ufloat		;unsigned int to float
+176   0000              	EXTERN	ifix		;Convert float to int
+177   0000              
+178   0000              	EXTERN	dstore		;FA->(de)
+179   0000              	EXTERN	dload		;FA<-(hl)
+180   0000              	EXTERN	dldpsh		;(hl)->(stack)
+181   0000              	EXTERN	dpush		;FA->(stack)
+182   0000              	EXTERN	dpush2		;FA->(stack under)
+183   0000              	EXTERN	dpush3		;FA->(stack under,long)
+184   0000              
+185   0000              	EXTERN	fa		;may not be needed in this file
+186   0000              	EXTERN	extra		;ditto
+187   0000              	EXTERN	__atof2		;string->fa conversion
+188   0000              	EXTERN	l_f48_ldexp	;FA * pow2(N)
+189   0000              	EXTERN	l_f48_f16tof	;Convert _Float16 to float
+190   0000              	EXTERN	l_f48_ftof16	;Convert float to _Float16
+191   0000              
+192   0000              	; 16 bit float ABI
+193   0000              	EXTERN	l_f16_add
+194   0000              	EXTERN	l_f16_sub
+195   0000              	EXTERN	l_f16_mul
+196   0000              	EXTERN	l_f16_div
+197   0000              	EXTERN	l_f16_le
+198   0000              	EXTERN	l_f16_lt
+199   0000              	EXTERN	l_f16_ge
+200   0000              	EXTERN	l_f16_gt
+201   0000              	EXTERN	l_f16_eq
+202   0000              	EXTERN	l_f16_ne
+203   0000              	EXTERN	l_f16_swap
+204   0000              	EXTERN	l_f16_schar2f
+205   0000              	EXTERN	l_f16_uchar2f
+206   0000              	EXTERN	l_f16_sint2f
+207   0000              	EXTERN	l_f16_uint2f
+208   0000              	EXTERN	l_f16_slong2f
+209   0000              	EXTERN	l_f16_ulong2f
+210   0000              	EXTERN	l_f16_f2sint
+211   0000              	EXTERN	l_f16_f2uint
+212   0000              	EXTERN	l_f16_f2slong
+213   0000              	EXTERN	l_f16_f2ulong
+214   0000              	EXTERN	l_f16_ldexp
+215   0000              	EXTERN	l_f16_invf	;Only for ieee16
+216   0000              	EXTERN	l_f16_f16tof	;A noop
+217   0000              	EXTERN	l_f16_ftof16	;A noop
+218   0000              
+219   0000              	; 32 bit float ABI
+220   0000              	EXTERN	l_f32_add
+221   0000              	EXTERN	l_f32_sub
+222   0000              	EXTERN	l_f32_mul
+223   0000              	EXTERN	l_f32_div
+224   0000              	EXTERN	l_f32_le
+225   0000              	EXTERN	l_f32_lt
+226   0000              	EXTERN	l_f32_ge
+227   0000              	EXTERN	l_f32_gt
+228   0000              	EXTERN	l_f32_eq
+229   0000              	EXTERN	l_f32_ne
+230   0000              	EXTERN	l_f32_swap
+231   0000              	EXTERN	l_f32_negate
+232   0000              	EXTERN	l_f32_schar2f
+233   0000              	EXTERN	l_f32_uchar2f
+234   0000              	EXTERN	l_f32_sint2f
+235   0000              	EXTERN	l_f32_uint2f
+236   0000              	EXTERN	l_f32_slong2f
+237   0000              	EXTERN	l_f32_ulong2f
+238   0000              	EXTERN	l_f32_f2sint
+239   0000              	EXTERN	l_f32_f2uint
+240   0000              	EXTERN	l_f32_f2slong
+241   0000              	EXTERN	l_f32_f2ulong
+242   0000              	EXTERN	l_f32_ldexp
+243   0000              	EXTERN	l_f32_invf	;Only for math32
+244   0000              	EXTERN	l_f32_f16tof	;Convert _Float16 to float
+245   0000              	EXTERN	l_f32_ftof16	;Convert float to _Float16
+246   0000              
+247   0000              	; 64 bit float ABI
+248   0000              	EXTERN	l_f64_load
+249   0000              	EXTERN	l_f64_add
+250   0000              	EXTERN	l_f64_sub
+251   0000              	EXTERN	l_f64_mul
+252   0000              	EXTERN	l_f64_div
+253   0000              	EXTERN	l_f64_le
+254   0000              	EXTERN	l_f64_lt
+255   0000              	EXTERN	l_f64_ge
+256   0000              	EXTERN	l_f64_gt
+257   0000              	EXTERN	l_f64_eq
+258   0000              	EXTERN	l_f64_ne
+259   0000              	EXTERN	l_f64_negate
+260   0000              	EXTERN	l_f64_swap
+261   0000              	EXTERN	l_f64_store
+262   0000              	EXTERN	l_f64_dpush
+263   0000              	EXTERN	l_f64_dldpsh
+264   0000              	EXTERN	l_f64_dpush2
+265   0000              	EXTERN	l_f64_dpush3
+266   0000              	EXTERN	l_f64_schar2f
+267   0000              	EXTERN	l_f64_uchar2f
+268   0000              	EXTERN	l_f64_sint2f
+269   0000              	EXTERN	l_f64_uint2f
+270   0000              	EXTERN	l_f64_slong2f
+271   0000              	EXTERN	l_f64_ulong2f
+272   0000              	EXTERN	l_f64_f2sint
+273   0000              	EXTERN	l_f64_f2uint
+274   0000              	EXTERN	l_f64_f2slong
+275   0000              	EXTERN	l_f64_f2ulong
+276   0000              	EXTERN	l_f64_ldexp
+277   0000              	EXTERN	l_f64_f16tof	;Convert _Float16 to float
+278   0000              	EXTERN	l_f64_ftof16	;Convert float to _Float16
+279   0000              
+280   0000              
+281   0000              ;--------------------------------------------------
+282   0000              ; Routines for picking up variables from far memory
+283   0000              ;--------------------------------------------------
+284   0000              
+285   0000              	EXTERN	lp_gchar
+286   0000              	EXTERN	lp_gdoub
+287   0000              	EXTERN	lp_gint
+288   0000              	EXTERN	lp_glong
+289   0000              	EXTERN	lp_gptr
+290   0000              	EXTERN	lp_pchar
+291   0000              	EXTERN	lp_pdoub
+292   0000              	EXTERN	lp_pint
+293   0000              	EXTERN	lp_plong
+294   0000              	EXTERN	lp_pptr
+295   0000              
+296   0000              	EXTERN	l_farcall	; Long call
+297   0000              
+298   0000              
+299   0000              ;--------------------------------------------------
+300   0000              ; Routines for handling 64 bit integers for sccz80
+301   0000              ;--------------------------------------------------
+302   0000              
+303   0000                      EXTERN  __i64_acc
+304   0000              	EXTERN	l_i64_load
+305   0000              	EXTERN	l_i64_store
+306   0000              	EXTERN	l_i64_push
+307   0000              	EXTERN	l_i64_add
+308   0000              	EXTERN	l_i64_sub
+309   0000              	EXTERN	l_i64_mult
+310   0000              	EXTERN	l_i64_mod
+311   0000              	EXTERN	l_i64_mod_u
+312   0000              	EXTERN	l_i64_div
+313   0000              	EXTERN	l_i64_div_u
+314   0000              	EXTERN	l_i64_or
+315   0000              	EXTERN	l_i64_xor
+316   0000              	EXTERN	l_i64_and
+317   0000              	EXTERN	l_i64_asr_u
+318   0000              	EXTERN	l_i64_asr_uo
+319   0000              	EXTERN	l_i64_asr
+320   0000              	EXTERN	l_i64_asro
+321   0000              	EXTERN	l_i64_asl
+322   0000              	EXTERN	l_i64_aslo
+323   0000              	EXTERN	l_i64_inc
+324   0000              	EXTERN	l_i64_dec
+325   0000              	EXTERN	l_i64_eq0
+326   0000              	EXTERN	l_i64_eq
+327   0000              	EXTERN	l_i64_ne
+328   0000              	EXTERN	l_i64_ge
+329   0000              	EXTERN	l_i64_gt
+330   0000              	EXTERN	l_i64_uge
+331   0000              	EXTERN	l_i64_ugt
+332   0000              	EXTERN	l_i64_le
+333   0000              	EXTERN	l_i64_lt
+334   0000              	EXTERN	l_i64_ule
+335   0000              	EXTERN	l_i64_ult
+336   0000              	EXTERN	l_i64_lneg
+337   0000              	EXTERN	l_i64_neg
+338   0000              	EXTERN	l_i64_com
+339   0000              	EXTERN	l_i64_case
+340   0000              	EXTERN	l_i64_push_under_int
+341   0000              	EXTERN	l_i64_push_under_int_mhl
+342   0000              	EXTERN	l_i64_copy
+343   0000              	EXTERN	l_i64_slong2i64
+344   0000              	EXTERN	l_i64_ulong2i64
+345   0000              	EXTERN	l_i64_sint2i64
+346   0000              	EXTERN	l_i64_uint2i64
+347   0000                      EXTERN  l_i64_u64_toi32
+348   0000              
+349   0000              
+350   0000              ;-------------------
+351   0000              ; Routines for SDCC
+352   0000              ;-------------------
+353   0000              
+354   0000              	EXTERN	__divsint_rrx_s
+355   0000              	EXTERN	__divsint_rrx_hds
+356   0000              	EXTERN	__divuint_rrx_s
+357   0000              	EXTERN	__divuint_rrx_hds
+358   0000              	EXTERN	__divsuchar_rrx_s
+359   0000              	EXTERN	__divuschar_rrx_s
+360   0000              	EXTERN	__divuchar_rrx_s
+361   0000              	EXTERN	__divuchar_rrx_hds
+362   0000              	EXTERN	__moduchar_rrx_s
+363   0000              	EXTERN	__moduchar_rrx_hds
+364   0000              	EXTERN	__moduschar_rrx_s
+365   0000              	EXTERN	__modsuchar_rrx_s
+366   0000              	EXTERN	__modschar_rrx_s
+367   0000              	EXTERN	__modschar_rrx_hds
+368   0000              	EXTERN	__modsint_rrx_s
+369   0000              	EXTERN	__modsint_rrx_hds
+370   0000              	EXTERN	__moduint_rrx_s
+371   0000              	EXTERN	__moduint_rrx_hds
+372   0000              	EXTERN	__get_remainder
+373   0000              	EXTERN	__divunsigned
+374   0000              	EXTERN	__div_signexte
+375   0000              	EXTERN	__divu16
+376   0000              	EXTERN	__div16
+377   0000              	EXTERN	__div8
+378   0000              	EXTERN	__muluchar_rrx_s
+379   0000              	EXTERN	__muluchar_rrx_hds
+380   0000              	EXTERN	__mulsuchar_rrx_s
+381   0000              	EXTERN	__muluschar_rrx_s
+382   0000              	EXTERN	__mulschar_rrx_s
+383   0000              	EXTERN	__mulschar_rrx_hds
+384   0000              	EXTERN	__mulint_rrx_s
+385   0000              	EXTERN	__mulint_rrx_hds
+386   0000              	EXTERN	__mul16
+387   0000              	EXTERN	__rrulong_rrx_s
+388   0000              	EXTERN	__rrslong_rrx_s
+389   0000              	EXTERN	__rlslong_rrx_s
+390   0000              	EXTERN	__rlulong_rrx_s
+391   0000                      EXTERN  __muluchar
+392   0000                      EXTERN  __mulschar
+393   0000              
+394   0000              	EXTERN	l_push_di
+395   0000              	EXTERN	l_pop_ei
+396   0000              
+397   0000                      EXTERN  l_debug_push_frame
+398   0000                      EXTERN  l_debug_pop_frame
+399   0000              
+400   0000              
+0     0000              
+0     0000              
+0     0000              	C_LINE	0,"compat.h"
+0     0000              	C_LINE	0,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+0     0000              	C_LINE	0,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/compiler.h"
+0     0000              	C_LINE	10,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+10    0000              	C_LINE	0,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+0     0000              	C_LINE	17,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+17    0000              	C_LINE	26,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+26    0000              	C_LINE	35,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+35    0000              	C_LINE	40,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+40    0000              	C_LINE	45,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+45    0000              	C_LINE	50,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+50    0000              	C_LINE	55,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+55    0000              	C_LINE	60,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+60    0000              	C_LINE	65,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+65    0000              	C_LINE	70,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+70    0000              	C_LINE	75,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+75    0000              	C_LINE	80,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+80    0000              	C_LINE	85,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+85    0000              	C_LINE	89,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+89    0000              	C_LINE	90,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+90    0000              	C_LINE	91,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+91    0000              	C_LINE	93,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+93    0000              	C_LINE	94,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+94    0000              	C_LINE	95,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+95    0000              	C_LINE	101,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+101   0000              	C_LINE	106,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/sys/types.h"
+106   0000              	C_LINE	11,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+11    0000              	C_LINE	13,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+13    0000              	C_LINE	14,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+14    0000              	C_LINE	15,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+15    0000              	C_LINE	17,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+17    0000              	C_LINE	18,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+18    0000              	C_LINE	19,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+19    0000              	C_LINE	21,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+21    0000              	C_LINE	22,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+22    0000              	C_LINE	23,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+23    0000              	C_LINE	25,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+25    0000              	C_LINE	26,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+26    0000              	C_LINE	27,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+27    0000              	C_LINE	29,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+29    0000              	C_LINE	30,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+30    0000              	C_LINE	31,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+31    0000              	C_LINE	33,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+33    0000              	C_LINE	34,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+34    0000              	C_LINE	35,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+35    0000              	C_LINE	37,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+37    0000              	C_LINE	38,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+38    0000              	C_LINE	40,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+40    0000              	C_LINE	41,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+41    0000              	C_LINE	43,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+43    0000              	C_LINE	44,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+44    0000              	C_LINE	49,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+49    0000              	C_LINE	52,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+52    0000              	C_LINE	54,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+54    0000              	C_LINE	55,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
+55    0000              	C_LINE	3,"compat.h"
+3     0000              	C_LINE	4,"compat.h"
+4     0000              	C_LINE	5,"compat.h"
+5     0000              	C_LINE	1,"compat.c"
+1     0000              	C_LINE	3,"compat.c"
+3     0000              	SECTION	code_compiler
+3     0000              
+3     0000              ; Function delayMicroseconds flags 0x00000200 __smallc
+3     0000              ; void delayMicroseconds(unsigned int delay)
+3     0000              ; parameter 'unsigned int delay' at sp+2 size(2)
+3     0000              	C_LINE	3,"compat.c::delayMicroseconds::0::0"
+3     0000              ._delayMicroseconds
+3     0000  C9          	ret
+3     0001              
+3     0001              
+3     0001              	C_LINE	7,"compat.c::delayMicroseconds::0::1"
+7     0001              ; --- Start of Optimiser additions ---
+7     0001              
+7     0001              
+7     0001              ; --- Start of Static Variables ---
+7     0001              
+7     0001              	SECTION	bss_compiler
+7     0000              	SECTION	code_compiler
+7     0001              
+7     0001              
+7     0001              ; --- Start of Scope Defns ---
+7     0001              
+7     0001              	GLOBAL	_delayMicroseconds
+7     0001              	GLOBAL	_micros
+7     0001              
+7     0001              
+7     0001              ; --- End of Scope Defns ---
+7     0001              
+7     0001              
+7     0001              ; --- End of Compilation ---
+7     0001              

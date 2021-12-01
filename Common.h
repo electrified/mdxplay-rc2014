@@ -1,9 +1,9 @@
-#if !defined( YM_COMMON_H_INCLUDED )
+#ifndef YM_COMMON_H_INCLUDED
 #define YM_COMMON_H_INCLUDED
 #include	"YM2151.h"
-#include	"IO.h"
+// #include	"IO.h"
 
-#define		_DEBUG
+// #define		_DEBUG
 
 #ifdef	_DEBUG
 #define		ASSERT(msg)		io.Assert(msg)

@@ -1,6 +1,5 @@
-#if !defined( YM_MMLP_H_INCLUDED )
+#ifndef YM_MMLP_H_INCLUDED
 #define YM_MMLP_H_INCLUDED
-#include  <Arduino.h>
 
 #define		FLG_HALT		(1<<0)
 #define		FLG_SYNCWAIT	(1<<1)
@@ -15,92 +14,91 @@
 #define		FLG_VLFO			(1<<6)		// ボリュームLFO実行中
 #define		FLG_PLFO			(1<<7)		// ピッチLFO実行中
 
-class	MMLParser{
-	static	const	uint8_t	RepeatCnt=4;
-	public:
-		uint8_t		StatusF;
-		uint8_t		FunctionF;
-		uint8_t		Channel;
-		uint16_t	MMLOffset;
-		uint16_t	CurrentAddr;
-		uint8_t		Clock;
-		uint8_t		KeyOffClock;
-		
-		typedef		struct	{
-			uint16_t	Addr;
-			uint8_t		Count;
-		}RepeatFrame;
-		RepeatFrame	RepeatList[4];
-		int8_t		KeyLength;
-		
-		uint32_t	Portamento;
-		uint32_t	PortamentoDelta;
-		uint16_t	Detune;
-		uint8_t		Note;
-		uint8_t		Volume;
-		uint8_t		KeyOnDelay;
-		uint8_t		KeyOnDelayClock;
-		
-		uint8_t		RegPAN;
-		uint8_t		RegPMSAMS;
+const	uint8_t	MMLParser_RepeatCnt=4;
 
-		typedef		struct	{
-			uint32_t	OffsetStart;		//32->16
-			uint32_t	DeltaStart;			//32->16
-			uint32_t	Offset;				//32->16
-			uint32_t	Delta;				//32->16
-			uint16_t	LengthFixd;
-			uint16_t	Length;
-			uint16_t	LengthCounter;
-			int8_t		Type;
-		}PLFOFrame;
-		PLFOFrame	PLFO;
+struct RepeatFrame	{
+	uint16_t	Addr;
+	uint8_t		Count;
+} ;
 
-		typedef		struct	{
-			uint16_t	DeltaStart;
-			uint16_t	DeltaFixd;
-			uint16_t	Delta;
-			uint16_t	Offset;
-			uint16_t	Length;
-			uint16_t	LengthCounter;
-			int8_t		Type;
-		}VLFOFrame;
-		VLFOFrame	VLFO;
-		
-		void		Init(uint8_t,uint16_t,uint16_t);
-		void		Elapse();
-		void		Calc();
-		void		SetTone();
-		void		KeyOn();
-		void		KeyOff();
-		void		UpdateVolume();
-		
-		void		C_xx_Unknown();
-		void		C_e7_Fadeout();
-		void		C_e8_PCM8Ext();
-		void		C_e9_LFODelay();
-		void		C_ea_LFOCtrl();
-		void		C_eb_LFOVolumeCtrl();
-		void		C_ec_LFOPitchCtrl();
-		void		C_ed_NoisePitch();
-		void		C_ee_SyncWait();
-		void		C_ef_SyncSend();
-		void		C_f0_KeyOnDelay();
-		void		C_f1_EndOfData();
-		void		C_f2_Portamento();
-		void		C_f3_Detune();
-		void		C_f4_ExitRepeat();
-		void		C_f5_BottomRepeat();
-		void		C_f6_StartRepeat();
-		void		C_f7_DisableKeyOn();
-		void		C_f8_KeyOnTime();
-		void		C_f9_VolumeUp();
-		void		C_fa_VolumeDown();
-		void		C_fb_Volume();
-		void		C_fc_Panpot();
-		void		C_fd_Timbre();
-		void		C_fe_Registar();
-		void		C_ff_Tempo();
-
+struct PLFOFrame	{
+	uint32_t	OffsetStart;		//32->16
+	uint32_t	DeltaStart;			//32->16
+	uint32_t	Offset;				//32->16
+	uint32_t	Delta;				//32->16
+	uint16_t	LengthFixd;
+	uint16_t	Length;
+	uint16_t	LengthCounter;
+	int8_t		Type;
 };
+
+struct VLFOFrame	{
+	uint16_t	DeltaStart;
+	uint16_t	DeltaFixd;
+	uint16_t	Delta;
+	uint16_t	Offset;
+	uint16_t	Length;
+	uint16_t	LengthCounter;
+	int8_t		Type;
+} ;
+struct MMLParser{
+	uint8_t		StatusF;
+	uint8_t		FunctionF;
+	uint8_t		Channel;
+	uint16_t	MMLOffset;
+	uint16_t	CurrentAddr;
+	uint8_t		Clock;
+	uint8_t		KeyOffClock;
+	struct RepeatFrame	RepeatList[4];
+	int8_t		KeyLength;
+	
+	uint32_t	Portamento;
+	uint32_t	PortamentoDelta;
+	uint16_t	Detune;
+	uint8_t		Note;
+	uint8_t		Volume;
+	uint8_t		KeyOnDelay;
+	uint8_t		KeyOnDelayClock;
+	
+	uint8_t		RegPAN;
+	uint8_t		RegPMSAMS;
+	struct PLFOFrame	PLFO;
+	struct VLFOFrame	VLFO;
+};
+
+void		MMLParser_Init(struct MMLParser *mmlParser, uint8_t,uint16_t,uint16_t);
+void		MMLParser_Elapse(struct MMLParser *mmlParser);
+void		MMLParser_Calc(struct MMLParser *mmlParser);
+void		MMLParser_SetTone(struct MMLParser *mmlParser);
+void		MMLParser_KeyOn(struct MMLParser *mmlParser);
+void		MMLParser_KeyOff(struct MMLParser *mmlParser);
+void		MMLParser_UpdateVolume(struct MMLParser *mmlParser);
+
+void		MMLParser_C_xx_Unknown(struct MMLParser *mmlParser);
+void		MMLParser_C_e7_Fadeout(struct MMLParser *mmlParser);
+void		MMLParser_C_e8_PCM8Ext(struct MMLParser *mmlParser);
+void		MMLParser_C_e9_LFODelay(struct MMLParser *mmlParser);
+void		MMLParser_C_ea_LFOCtrl(struct MMLParser *mmlParser);
+void		MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser);
+void		MMLParser_C_ec_LFOPitchCtrl(struct MMLParser *mmlParser);
+void		MMLParser_C_ed_NoisePitch(struct MMLParser *mmlParser);
+void		MMLParser_C_ee_SyncWait(struct MMLParser *mmlParser);
+void		MMLParser_C_ef_SyncSend(struct MMLParser *mmlParser);
+void		MMLParser_C_f0_KeyOnDelay(struct MMLParser *mmlParser);
+void		MMLParser_C_f1_EndOfData(struct MMLParser *mmlParser);
+void		MMLParser_C_f2_Portamento(struct MMLParser *mmlParser);
+void		MMLParser_C_f3_Detune(struct MMLParser *mmlParser);
+void		MMLParser_C_f4_ExitRepeat(struct MMLParser *mmlParser);
+void		MMLParser_C_f5_BottomRepeat(struct MMLParser *mmlParser);
+void		MMLParser_C_f6_StartRepeat(struct MMLParser *mmlParser);
+void		MMLParser_C_f7_DisableKeyOn(struct MMLParser *mmlParser);
+void		MMLParser_C_f8_KeyOnTime(struct MMLParser *mmlParser);
+void		MMLParser_C_f9_VolumeUp(struct MMLParser *mmlParser);
+void		MMLParser_C_fa_VolumeDown(struct MMLParser *mmlParser);
+void		MMLParser_C_fb_Volume(struct MMLParser *mmlParser);
+void		MMLParser_C_fc_Panpot(struct MMLParser *mmlParser);
+void		MMLParser_C_fd_Timbre(struct MMLParser *mmlParser);
+void		MMLParser_C_fe_Registar(struct MMLParser *mmlParser);
+void		MMLParser_C_ff_Tempo(struct MMLParser *mmlParser);
+
 #endif  //YM_MMLP_H_INCLUDED

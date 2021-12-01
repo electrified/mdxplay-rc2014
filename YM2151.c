@@ -2,24 +2,14 @@
 	YM2151 library	v0.13
 	author:ISH
 */
-#include <Arduino.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-
 #include  "Common.h"
 #include  "YM2151.h"
 
 #define	DIRECT_IO
 
-YM2151_Class	YM2151;
-
-YM2151_Class::YM2151_Class()
-{
-}
-
 /*! IOの初期設定を行いYM2151/YM3012をハードリセットする、必ず呼ぶ必要あり
  */
-void	YM2151_Class::begin()
+void	YM2151_begin()
 {
 	digitalWrite(PIN_IC, HIGH);
 	digitalWrite(PIN_ADDR0, HIGH);
@@ -56,7 +46,7 @@ static	uint8_t last_write_addr=0x00;
 	\param addr		アドレス
 	\param data		データ
  */
-void	YM2151_Class::write(uint8_t addr,uint8_t data)
+void	YM2151_write(uint8_t addr,uint8_t data)
 {
 	uint8_t i,wi;
 	volatile	uint8_t	*ddrD=&DDRD;
@@ -115,7 +105,7 @@ void	YM2151_Class::write(uint8_t addr,uint8_t data)
 
 /*! ステータスを読み込む、bit0のみ有効
  */
-uint8_t	YM2151_Class::read()
+uint8_t	YM2151_read()
 {
 	uint8_t i,wi,data;
 	volatile	uint8_t	*ddrD=&DDRD;
@@ -138,7 +128,7 @@ uint8_t	YM2151_Class::read()
 /*! 約300nSec x loop分だけ待つ、あまり正確でない。
 	\param loop		ループ数
  */
-void	YM2151_Class::wait(uint8_t loop)
+void	YM2151_wait(uint8_t loop)
 {
 	uint8_t wi;
 	for(wi=0;wi<loop;wi++){
@@ -149,7 +139,7 @@ void	YM2151_Class::wait(uint8_t loop)
 
 /*! LFOを初期化する
  */
-void	YM2151_Class::initLFO()
+void	YM2151_initLFO()
 {
 	write(0x1,0x1);
 }
@@ -161,7 +151,7 @@ void	YM2151_Class::initLFO()
 	\param ch				設定するチャンネル
 	\param prog_addr		プログラムアドレス
  */
-void	YM2151_Class::loadTimbre(uint8_t ch,uint16_t prog_addr)
+void	YM2151_loadTimbre(uint8_t ch,uint16_t prog_addr)
 {
 	static uint8_t carrier_slot_tbl[] = {
 		0x08,0x08,0x08,0x08,0x0c,0x0e,0x0e,0x0f,
@@ -202,7 +192,7 @@ void	YM2151_Class::loadTimbre(uint8_t ch,uint16_t prog_addr)
 	\param ch				設定するチャンネル
 	\param prog_addr		プログラムアドレス
  */
-void	YM2151_Class::loadSeparationTimbre(uint8_t ch,uint16_t prog_addr)
+void	YM2151_loadSeparationTimbre(uint8_t ch,uint16_t prog_addr)
 {
 	// D2R(SR)が2151は5bit、DT2(追加デチューン)が無視されているので微妙に使いきれない
 	// D2Rは<<1するとどうも変なのでそのまま
@@ -240,7 +230,7 @@ void	YM2151_Class::loadSeparationTimbre(uint8_t ch,uint16_t prog_addr)
 /*! MDX形式の音色データを読み込みコンソールにダンプする
 	\param prog_addr		プログラムアドレス
  */
-void	YM2151_Class::dumpTimbre(uint16_t prog_addr){
+void	YM2151_dumpTimbre(uint16_t prog_addr){
 	uint16_t taddr = prog_addr;
 	uint8_t	no = pgm_read_byte_near(taddr++);
 	uint8_t	flcon = pgm_read_byte_near(taddr++);
@@ -282,7 +272,7 @@ void	YM2151_Class::dumpTimbre(uint16_t prog_addr){
 	\param volume			ボリューム、0(最小)～15(最大) 最上位ビット(0x80)Onの場合は0x80をマスク後TLの値にそのまま加算
 	\param offset			上位8bitをTLの値に加算、MDX再生用
  */
-void	YM2151_Class::setVolume(uint8_t ch,uint8_t volume,uint16_t offset)
+void	YM2151_setVolume(uint8_t ch,uint8_t volume,uint16_t offset)
 {
 	static  uint8_t	volume_tbl[] = {
 		0x2a,0x28,0x25,0x22,0x20,0x1d,0x1a,0x18,
@@ -310,7 +300,7 @@ void	YM2151_Class::setVolume(uint8_t ch,uint8_t volume,uint16_t offset)
 /*! ノートオンする
 	\param ch				オンするチャンネル
  */
-void	YM2151_Class::noteOn(uint8_t ch)
+void	YM2151_noteOn(uint8_t ch)
 {
 	write(0x08,(RegSLOTMASK[ch] << 3)  + ch);
 }
@@ -318,12 +308,12 @@ void	YM2151_Class::noteOn(uint8_t ch)
 /*! ノートオフする
 	\param ch				オフするチャンネル
  */
-void	YM2151_Class::noteOff(uint8_t ch)
+void	YM2151_noteOff(uint8_t ch)
 {
 		write(0x08,0x00 + ch);
 }
 
-const char KeyCodeTable[] PROGMEM= {
+const char KeyCodeTable[] = {
 	0x00,0x01,0x02,0x04,0x05,0x06,0x08,0x09,
 	0x0a,0x0c,0x0d,0x0e,0x10,0x11,0x12,0x14,
 	0x15,0x16,0x18,0x19,0x1a,0x1c,0x1d,0x1e,
@@ -343,7 +333,7 @@ const char KeyCodeTable[] PROGMEM= {
 	\param keycode			オクターブ0のD#を0とした音階、D# E F F# G G# A A# B (オクターブ1) C C# D....と並ぶ
 	\param kf				音階微調整、64で1音分上がる。
  */
-void	YM2151_Class::setTone(uint8_t ch,uint8_t keycode,int16_t kf){
+void	YM2151_setTone(uint8_t ch,uint8_t keycode,int16_t kf){
 	int16_t	offset_kf = (kf & 0x3f);
 	int16_t	offset_note = keycode + (kf >> 6);
 	if(offset_note < 0)offset_note=0;
@@ -356,7 +346,7 @@ void	YM2151_Class::setTone(uint8_t ch,uint8_t keycode,int16_t kf){
 	\param ch				設定するチャンネル
 	\param pan				パン設定、0:出力なし 1:左 2:右 3:両出力
  */
-void	YM2151_Class::setPanpot(uint8_t ch,uint8_t pan){
+void	YM2151_setPanpot(uint8_t ch,uint8_t pan){
 	write(0x20+ch,
 		(pan<<6) | (RegFLCON[ch] ));
 
