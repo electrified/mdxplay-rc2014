@@ -1,7 +1,7 @@
 SRCS=$(wildcard *.c)
 CC = zcc
 CFLAGSOLD = +rc2014 -subtype=none -vn -SO3 -O3 --opt-code-size -clib=sdcc_iy -pragma-define:__CRTCFG=-1
-CFLAGS = +cpm 
+CFLAGS = +cpm -DAMALLOC
 #-clib=sdcc_iy
 all:
 	$(CC) $(CFLAGS) --list $(SRCS) -o main -create-app

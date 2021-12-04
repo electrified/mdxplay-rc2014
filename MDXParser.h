@@ -13,6 +13,8 @@ uint16_t	MDXParser_GetTimbreAddr(struct MDXParser *mdxParser, uint8_t);
 void		MDXParser_SendSyncRelease(struct MDXParser *mdxParser, uint8_t);
 uint32_t	MDXParser_ClockToMilliSec(struct MDXParser *mdxParser, uint8_t clock);
 uint32_t	MDXParser_ClockToMicroSec(struct MDXParser *mdxParser, uint8_t clock);
+uint8_t	    MDXParser_ReadData8(struct MDXParser *mdxParser, uint16_t addr);
+uint16_t    MDXParser_ReadData16(struct MDXParser *mdxParser, uint16_t addr);
 
 struct	MDXParser{
 	uint16_t	DataBP;
@@ -23,14 +25,6 @@ struct	MDXParser{
 	struct MMLParser OPMChannel[MDXParser_ChNum];
 };
 
-uint8_t	MDXParser_ReadData8(struct MDXParser *mdxParser, uint16_t addr){
-	return (uint8_t)0;//(pgm_read_byte_near(mdxParser->DataBP + (addr)));
-}
-
-uint16_t MDXParser_ReadData16(struct MDXParser *mdxParser, uint16_t addr){
-	// uint16_t rdata = pgm_read_word_near(mdxParser->DataBP + (addr));
-	return	 0;//(rdata << 8) | (rdata >> 8);
-}
 
 extern struct	MDXParser	mdx;
 #endif

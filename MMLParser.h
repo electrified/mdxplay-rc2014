@@ -14,7 +14,7 @@
 #define		FLG_VLFO			(1<<6)		// ボリュームLFO実行中
 #define		FLG_PLFO			(1<<7)		// ピッチLFO実行中
 
-const	uint8_t	MMLParser_RepeatCnt=4;
+
 
 struct RepeatFrame	{
 	uint16_t	Addr;

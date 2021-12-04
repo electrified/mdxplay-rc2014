@@ -25,6 +25,30 @@
 22    0000                  defc    crt0 = 1
 23    0000                  INCLUDE "zcc_opt.def"
 1     0000              
+2     0000              IF !DEFINED_USING_amalloc
+3     0000              	defc	DEFINED_USING_amalloc = 1
+4     0000              	defc USING_amalloc = 0
+5     0000              	IFNDEF USING_amalloc
+6     0000              	ENDIF
+7     0000              ENDIF
+8     0000              
+9     0000              
+10    0000              IF !DEFINED_CRT_printf_format
+11    0000              	defc	DEFINED_CRT_printf_format = 1
+12    0000              	defc CRT_printf_format = 0x00000201
+13    0000              ELSE
+14    0000              	UNDEFINE temp_printf_format
+15    0000              	defc temp_printf_format = CRT_printf_format
+16    0000              	UNDEFINE CRT_printf_format
+17    0000              	defc CRT_printf_format = temp_printf_format | 0x00000201
+18    0000              ENDIF
+19    0000              
+20    0000              
+21    0000              IF !NEED_printf
+22    0000              	DEFINE	NEED_printf
+23    0000              ENDIF
+24    0000              
+25    0000              
 24    0000              
 25    0000              
 26    0000              
@@ -316,7 +340,7 @@
 99    0036              
 100   0036  21 00 00        ld      hl,0
 101   0039  39              add     hl,sp
-102   003A  22 0B 01        ld      (start1+1),hl	;Save entry stack
+102   003A  22 2F 01        ld      (start1+1),hl	;Save entry stack
 103   003D              IF (startup=3)
 104   003D                  ; Increase to cover +3 MEM banking
 105   003D                  defc    __clib_exit_stack_size_t  = __clib_exit_stack_size + 18 + 18
@@ -388,887 +412,1014 @@
 141   004F              ; the compiled program and the stack pointer
 142   004F              IF DEFINED_USING_amalloc
 143   004F                  INCLUDE "crt/classic/crt_init_amalloc.asm"
-144   004F              ENDIF
-145   004F              
-146   004F              IF CRT_ENABLE_COMMANDLINE = 1
-147   004F  21 80 00        ld      hl,$80
-148   0052  7E              ld      a,(hl)
-149   0053                  ;ld      b,0
-150   0053  44              ld      b,h
-151   0054  A7              and     a
-152   0055  CA D1 00        jp      z,argv_done
-153   0058                  ;inc	hl
-154   0058  4F              ld      c,a
-155   0059  09              add     hl,bc   ;now points to the end of the command line
-156   005A  0D              dec     c
-157   005B                  INCLUDE	"crt/classic/crt_command_line.asm"
-1     005B              ; Command line parsing
-2     005B              
-3     005B              ; Push pointers to argv[n] onto the stack now
-4     005B              ; We must start from the end
-5     005B              ; Entry:  hl = end of arguments
-6     005B              ;	   c = length of arguments
-7     005B              ;	   b = 0
-8     005B              ; Exit:	  bc = argc
-9     005B              ;         hl = argv
-10    005B              
-11    005B              IF CRT_ENABLE_COMMANDLINE = 1
-12    005B  18 04           jr      argv_begin
-13    005D              
-14    005D  77 00       redir_fopen_flag:		defb	'w',0
-15    005F  72          redir_fopen_flagr:		defb	'r'
-16    0060  00          commandline_argv0:		defb	0
-17    0061              
-18    0061              argv_begin:
-19    0061  11 00 00        ld      de,0	;NULL pointer at end of array, just in case
-20    0064  D5              push    de
-21    0065              ; Try to find the end of the arguments
-22    0065              argv_loop_1:
-23    0065  7E              ld      a,(hl)          ;Strip off trailing spaces
-24    0066  FE 20           cp      ' '
-25    0068  20 06           jr      nz,argv_loop_2
-26    006A  36 00           ld      (hl),0
-27    006C  2B              dec     hl
-28    006D  0D              dec     c
-29    006E  20 F5           jr      nz,argv_loop_1
-30    0070              ; We've located the end of the last argument, try to find the start
-31    0070              argv_loop_2:
-32    0070  7E              ld      a,(hl)
-33    0071  FE 20           cp      ' '
-34    0073  20 58           jr      nz,argv_loop_3
-35    0075  23              inc     hl              ; We're now on the first character of the argument
-36    0076  0C              inc     c
-37    0077              IF CRT_COMMANDLINE_REDIRECTION = 1
-38    0077                      EXTERN freopen
-39    0077  AF                  xor     a
-40    0078  80                  add     b
-41    0079  20 25               jr      nz,no_redir_stdout
-42    007B  7E                  ld      a,(hl)
-43    007C  FE 3E               cp      '>'
-44    007E  20 20               jr      nz,no_redir_stdout
-45    0080  E5                  push    hl
-46    0081  23                  inc     hl
-47    0082  BE                  cp      (hl)
-48    0083  2B                  dec     hl
-49    0084  11 5D 00            ld      de,redir_fopen_flag	; "a" or "w"
-50    0087  20 04               jr      nz,noappendb
-51    0089  3E 61               ld      a,'a'
-52    008B  12                  ld      (de),a
-53    008C  23                  inc     hl
-54    008D              noappendb:
-55    008D  23                  inc     hl
-56    008E              
-57    008E  C5                  push    bc
-58    008F  E5                  push    hl					; file name ptr
-59    0090  D5                  push    de
-60    0091  11 0A 00            ld      de,__sgoioblk+10		; file struct for stdout
-61    0094  D5                  push    de
-62    0095  CD 00 00            call    freopen
-63    0098  D1                  pop     de
-64    0099  D1                  pop     de
-65    009A  E1                  pop     hl
-66    009B  C1                  pop     bc
-67    009C  E1                  pop     hl
-68    009D  2B                  dec     hl
-69    009E  18 20               jr      argv_zloop
-70    00A0              no_redir_stdout:
-71    00A0  7E                  ld      a,(hl)
-72    00A1  FE 3C               cp      '<'
-73    00A3  20 17               jr      nz,no_redir_stdin
-74    00A5  E5                  push    hl
-75    00A6  23                  inc     hl
-76    00A7  11 5F 00            ld      de,redir_fopen_flagr
-77    00AA  C5                  push    bc
-78    00AB  E5                  push    hl					; file name ptr
-79    00AC  D5                  push    de
-80    00AD  11 00 00            ld      de,__sgoioblk		; file struct for stdin
-81    00B0  D5                  push    de
-82    00B1  CD 00 00            call    freopen
-83    00B4  D1                  pop     de
-84    00B5  D1                  pop     de
-85    00B6  E1                  pop     hl
-86    00B7  C1                  pop     bc
-87    00B8  E1                  pop     hl
-88    00B9  2B                  dec	    hl
-89    00BA  18 04               jr      argv_zloop
-90    00BC              no_redir_stdin:
-91    00BC              ENDIF
-92    00BC  E5              push    hl
-93    00BD  04              inc     b
-94    00BE              empty_arg:
-95    00BE  2B              dec     hl
-96    00BF  0D              dec     c
-97    00C0              ; skip extra blanks
-98    00C0              argv_zloop:
-99    00C0  36 00           ld      (hl),0      ;Terminate the previous argument
-100   00C2  2B              dec     hl          ;Last character of previous argument
-101   00C3  0D              dec     c
-102   00C4  28 0B           jr      z,argv_done
-103   00C6  7E              ld      a,(hl)
-104   00C7  FE 20           cp      ' '
-105   00C9  28 F5           jr      z,argv_zloop ;Skip over multiple spaces
-106   00CB  18 A3           jr      argv_loop_2  ;And do the next argument
-107   00CD              
-108   00CD              argv_loop_3:
-109   00CD  2B              dec     hl
-110   00CE  0D              dec     c
-111   00CF  20 9F           jr      nz,argv_loop_2
-112   00D1              
-113   00D1              argv_done:
-114   00D1                  ; We may still have an argument left (if it was at the start of the buffer)
-115   00D1              
-116   00D1              argv_push_final_arg:
-117   00D1  7E              ld      a,(hl)              ;Strip leading spaces
-118   00D2  FE 20           cp      ' '
-119   00D4  20 03           jr      nz,argv_push_final_arg2
-120   00D6  23              inc     hl
-121   00D7  18 F8           jr      argv_push_final_arg
-122   00D9              argv_push_final_arg2:
-123   00D9  D1              pop     de                  ;Is it the same as the last argument we pushed?
-124   00DA  D5              push    de
-125   00DB  7C              ld      a,h
-126   00DC  92              sub     d
-127   00DD  20 04           jr      nz,argv_push_final_arg3
-128   00DF  7D              ld      a,l
-129   00E0  93              sub     e
-130   00E1  28 06           jr      z,argv_done_2
-131   00E3              argv_push_final_arg3:
-132   00E3  7E              ld      a,(hl)
-133   00E4  A7              and     a
-134   00E5  28 02           jr      z,argv_done_2
-135   00E7  E5              push    hl
-136   00E8  04              inc     b
-137   00E9              
-138   00E9              argv_done_2:
-139   00E9  21 60 00        ld      hl,commandline_argv0	;name of program (NULL)
-140   00EC  E5              push    hl
-141   00ED  04              inc     b
-142   00EE  21 00 00        ld      hl,0
-143   00F1  39              add     hl,sp	;address of argv
-144   00F2  48              ld      c,b
-145   00F3  06 00           ld      b,0
-146   00F5              ELSE
-147   00F5                  ld      hl,0    ;argv
-148   00F5                  ld      b,h     ;argc
-149   00F5                  ld      c,l
-150   00F5              ENDIF
-151   00F5              
-152   00F5              
-153   00F5              
-158   00F5  E5              push    hl	;argv
-159   00F6  C5              push    bc	;argc
-160   00F7              ELSE
-161   00F7                  ld      hl,0
-162   00F7                  push    hl  ;argv
-163   00F7                  push    hl  ;argc
-164   00F7              ENDIF
-165   00F7  CD 00 00        call    _main		;Call user code
-166   00FA  C1              pop     bc	;kill argv
-167   00FB  C1              pop     bc	;kill argc
-168   00FC              
-169   00FC  3A 5B 02        ld      a,(defltdsk)	;Restore default disc
-170   00FF  5F              ld      e,a
-171   0100  0E 0E           ld      c,14
-172   0102  CD 05 00        call    5
-173   0105              
-174   0105              cleanup:
-175   0105  E5              push    hl		;Save return value
-176   0106  CD 00 00        call    crt0_exit
-177   0109  C1              pop     bc		;Get exit() value into bc
-178   010A              start1:
-179   010A  31 00 00        ld      sp,0		;Pick up entry sp
-180   010D  C3 00 00        jp      0
-181   0110              
-182   0110  E9          l_dcal:	jp	(hl)		;Used for call by function ptr
-183   0111              
-184   0111              ; Memory banking for Spectrum +3
-185   0111              IF (startup=3)
-186   0111                  PUBLIC	pixelbyte
-187   0111              pixelbyte:	defb	0		; temp byte storage for VDP driver
-188   0111              
-189   0111              p3_poke:
-190   0111              		jp 0
-191   0111              
-192   0111              p3_peek:
-193   0111              		jp 0
-194   0111              
-195   0111              pokebyte_code:
-196   0111              		di
-197   0111              		; ..$15 00010101 -> banks 4,5,6,3
-198   0111              		; ..$11 00010001 -> banks 0,1,2,3 (TPA)
-199   0111              		ex  af,af
-200   0111              		ld	a,$15
-201   0111              		;ld	a,$0D
-202   0111              		;ld	a,$05
-203   0111              		ld bc,$1ffd
-204   0111              		out(c),a
-205   0111              		ex af,af
-206   0111              		ld (hl),a
-207   0111              		ld	a,$11		; avoid using ($FF01) to be compatible with CP/M 2.2
-208   0111              		;ld	a,$09
-209   0111              		;ld	a,$01
-210   0111              		;ld	a,($FF01)	; saved value
-211   0111              		out(c),a
-212   0111              		ei
-213   0111              		ret
-214   0111              		; adjust code size
-215   0111              		nop
-216   0111              peekbyte_code:
-217   0111              		di
-218   0111              		; ..$15 00010101 -> banks 4,5,6,3
-219   0111              		; ..$11 00010001 -> banks 0,1,2,3 (TPA)
-220   0111              		ld	a,$15
-221   0111              		;ld	a,$0D
-222   0111              		;ld	a,$05
-223   0111              		ld bc,$1ffd
-224   0111              		out(c),a
-225   0111              		ld a,(hl)
-226   0111              		ex  af,af
-227   0111              		ld	a,$11		; avoid using ($FF01) to be compatible with CP/M 2.2
-228   0111              		;ld	a,$09
-229   0111              		;ld	a,$01
-230   0111              		;ld	a,($FF01)	; saved value
-231   0111              		out(c),a
-232   0111              		ex  af,af
-233   0111              		ei
-234   0111              		ret
-235   0111              		; adjust code size
-236   0111              		nop
-237   0111              ENDIF
-238   0111              
-239   0111              
-240   0111                  INCLUDE "crt/classic/crt_runtime_selection.asm"
-1     0111              ;
-2     0111              ; Allow selection of the library functions at linktime
-3     0111              ;
-4     0111              ; Included by crt0 files
-5     0111              ;
-6     0111              
-7     0111              
-8     0111              ; scanf format picker
-9     0111              
-10    0111              ; Compatibility with the new library format picker. The classic library
-11    0111              ; implements several of these together so there's an element of grouping.
-12    0111              ;
-13    0111              ; Default is to enable all converters except for float.
-14    0111              ;
-15    0111              ; Use -pragma-define:CLIB_OPT_SCANF=0x..... to control formatters
-16    0111              ;
-17    0111              ; bit 0 =  $    01 = enable %d
-18    0111              ; bit 1 =  $    02 = enable %u
-19    0111              ; bit 2 =  $    04 = enable %x
-20    0111              ; bit 3 =  $    08 = enable %X (duplicate)
-21    0111              ; bit 4 =  $    10 = enable %o
-22    0111              ; bit 5 =  $    20 = enable %n
-23    0111              ; bit 6 =  $    40 = enable %i
-24    0111              ; bit 7 =  $    80 = enable %p
-25    0111              ; bit 8 =  $   100 = enable %B
-26    0111              ; bit 9 =  $   200 = enable %s
-27    0111              ; bit 10 = $   400 = enable %c
-28    0111              ; * bit 11 = $   800 = enable %I
-29    0111              ; bit 12 = $  1000 = enable %ld
-30    0111              ; bit 13 = $  2000 = enable %lu
-31    0111              ; bit 14 = $  4000 = enable %lx
-32    0111              ; bit 15 = $  8000 = enable %lX (duplicate)
-33    0111              ; bit 16 = $ 10000 = enable %lo
-34    0111              ; bit 17 = $ 20000 = enable %ln
-35    0111              ; bit 18 = $ 40000 = enable %li
-36    0111              ; bit 19 = $ 80000 = enable %lp
-37    0111              ; bit 20 = $100000 = enable %lB
-38    0111              ; * bit 21 = $200000 = enable %[
-39    0111              ; * bit 22 = $  400000 = enable %a
-40    0111              ; * bit 23 = $  800000 = enable %A
-41    0111              ; bit 24 = $ 1000000 = enable %e
-42    0111              ; bit 25 = $ 2000000 = enable %E
-43    0111              ; bit 26 = $ 4000000 = enable %f
-44    0111              ; bit 27 = $ 8000000 = enable %F
-45    0111              ; bit 28 = $10000000 = enable %g
-46    0111              ; bit 29 = $20000000 = enable %G
-47    0111              ; bit 30 = $40000000 = enable flags handling
-48    0111              
-49    0111              IF DEFINED_CLIB_OPT_SCANF
-50    0111              	; User has specified the configuration level - force scanf to be included
-51    0111              	UNDEFINE NEED_scanf
-52    0111              	DEFINE NEED_scanf
-53    0111              ELSE
-54    0111              	IF DEFINED_CRT_scanf_format
-55    0111              	    ;Only defined as part of sccz80
-56    0111              	    defc CLIB_OPT_SCANF = CRT_scanf_format
-57    0111                      ELSE
-58    0111              	    ; TODO: Some default configurations
-59    0111                      ENDIF
-60    0111              ENDIF
-61    0111              
-62    0111              
-63    0111              IF NEED_scanf
-64    0111              	PUBLIC	__scanf_format_table
-65    0111              	EXTERN	__scanf_handle_d
-66    0111              	EXTERN	__scanf_handle_u
-67    0111              	EXTERN	__scanf_handle_o
-68    0111              	EXTERN	__scanf_handle_x
-69    0111              	EXTERN	__scanf_handle_p
-70    0111              	EXTERN	__scanf_handle_B
-71    0111              	EXTERN	__scanf_handle_f
-72    0111              	EXTERN	__scanf_handle_s
-73    0111              	EXTERN	__scanf_handle_c
-74    0111              	EXTERN	__scanf_handle_n
-75    0111              	EXTERN	__scanf_handle_i
-76    0111              	EXTERN	__scanf_noop
-77    0111              
-78    0111              __scanf_format_table:
-79    0111              IF CLIB_OPT_SCANF & $40040
-80    0111              	defb	'i'
-81    0111              	defw	__scanf_handle_i
-82    0111              	defc	temp_CLIB_OPT_SCANF = CLIB_OPT_SCANF
-83    0111              	UNDEFINE CLIB_OPT_SCANF
-84    0111              	defc	CLIB_OPT_SCANF = temp_CLIB_OPT_SCANF | 0x3003 | 0x8c08c | 0x10010 | 0x100100
-85    0111              ENDIF
-86    0111              
-87    0111              
-88    0111              
-89    0111              IF CLIB_OPT_SCANF & $2002
-90    0111              	defb	'u'
-91    0111              	defw	__scanf_handle_u
-92    0111              ENDIF
-93    0111              
-94    0111              IF CLIB_OPT_SCANF & $1001
-95    0111              	defb	'd'
-96    0111              	defw	__scanf_handle_d
-97    0111              ENDIF
-98    0111              
-99    0111              IF CLIB_OPT_SCANF & $c00c
-100   0111              	defb	'x'
-101   0111              	defw	__scanf_handle_x
-102   0111              ENDIF
-103   0111              
-104   0111              IF CLIB_OPT_SCANF & $80080
-105   0111              	defb	'p'
-106   0111              	defw	__scanf_handle_x
-107   0111              ENDIF
-108   0111              
-109   0111              IF CLIB_OPT_SCANF & $10010
-110   0111              	defb	'o'
-111   0111              	defw	__scanf_handle_o
-112   0111              ENDIF
-113   0111              
-114   0111              IF CLIB_OPT_SCANF & $100100
-115   0111              	defb	'B'
-116   0111              	defw	__scanf_handle_B
-117   0111              ENDIF
-118   0111              
-119   0111              IF CLIB_OPT_SCANF & $20020
-120   0111              	defb	'n'
-121   0111              	defw	__scanf_handle_n
-122   0111              ENDIF
-123   0111              
-124   0111              IF CLIB_OPT_SCANF & $200
-125   0111              	defb	's'
-126   0111              	defw	__scanf_handle_s
-127   0111              ENDIF
-128   0111              
-129   0111              IF CLIB_OPT_SCANF & $400
-130   0111              	defb	'c'
-131   0111              	defw	__scanf_handle_c
-132   0111              ENDIF
-133   0111              
-134   0111              IF CLIB_OPT_SCANF & $4000000
-135   0111              	defb	'f'
-136   0111              	defw	__scanf_handle_f
-137   0111              ENDIF
-138   0111              
-139   0111              IF CLIB_OPT_SCANF & $1000000
-140   0111              	defb	'e'
-141   0111              	defw	__scanf_handle_f
-142   0111              ENDIF
-143   0111              IF CLIB_OPT_SCANF & $10000000
-144   0111              	defb	'g'
-145   0111              	defw	__scanf_handle_f
-146   0111              ENDIF
-147   0111              
-148   0111              	defb	0	;end marker
-149   0111              ENDIF
-150   0111              
-151   0111              ;
-152   0111              ; printf format picker
-153   0111              ;
-154   0111              
-155   0111              
-156   0111              IF DEFINED_CLIB_OPT_PRINTF
-157   0111              	; User has specified the configuration level - force printf to be included
-158   0111              	UNDEFINE NEED_printf
-159   0111              	DEFINE NEED_printf
-160   0111              ELSE
-161   0111              	IF DEFINED_CRT_printf_format
-162   0111              	    ;Only defined as part of sccz80
-163   0111              	    defc CLIB_OPT_PRINTF = CRT_printf_format
-164   0111                      ELSE
-165   0111              	    ; Default configurations to match old behaviour
-166   0111              	    ; The built in one is roughly the old ministdio
-167   0111              	    IF DEFINED_complexstdio
-168   0111                              defc CLIB_OPT_PRINTF = 0x851BF7BF
-169   0111                          ELSE
-170   0111              	        defc CLIB_OPT_PRINTF = 0x801BF7BF
-171   0111                          ENDIF
-172   0111                      ENDIF
-173   0111              ENDIF
-174   0111              
-175   0111              IF DEFINED_CLIB_OPT_PRINTF_2
-176   0111              	; User has specified the configuration level - force printf to be included
-177   0111              	UNDEFINE NEED_printf
-178   0111              	DEFINE NEED_printf
-179   0111              ENDIF
-180   0111              
-181   0111              IF NEED_printf
-182   0111              	PUBLIC	__printf_format_table
-183   0111              	PUBLIC  __printf_format_table64
-184   0111              	EXTERN	__printf_handle_d
-185   0111              	EXTERN	__printf_handle_u
-186   0111              	EXTERN	__printf_handle_o
-187   0111              	EXTERN	__printf_handle_x
-188   0111              	EXTERN	__printf_handle_X
-189   0111              	EXTERN	__printf_handle_p
-190   0111              	EXTERN	__printf_handle_e
-191   0111              	EXTERN	__printf_handle_f
-192   0111              	EXTERN	__printf_handle_s
-193   0111              	EXTERN	__printf_handle_c
-194   0111              	EXTERN	__printf_handle_n
-195   0111              	EXTERN	__printf_handle_B
-196   0111              	EXTERN	__printf_handle_ll
-197   0111              	EXTERN	__printf_handle_lld
-198   0111              	EXTERN	__printf_handle_llu
-199   0111              	EXTERN	__printf_handle_llo
-200   0111              	EXTERN	__printf_handle_llx
-201   0111              	EXTERN	__printf_handle_llX
-202   0111              	EXTERN	__printf_handle_llB
-203   0111              
-204   0111              __printf_format_table:
-205   0111              
-206   0111              IF CLIB_OPT_PRINTF & $2002
-207   0111              	defb	'u'
-208   0111              	defw	__printf_handle_u
-209   0111              ENDIF
-210   0111              
-211   0111              IF CLIB_OPT_PRINTF & $1001
-212   0111              	defb	'd'
-213   0111              	defw	__printf_handle_d
-214   0111              ENDIF
-215   0111              
-216   0111              IF CLIB_OPT_PRINTF & $4004
-217   0111              	defb	'x'
-218   0111              	defw	__printf_handle_x
-219   0111              ENDIF
-220   0111              
-221   0111              IF CLIB_OPT_PRINTF & $8008
-222   0111              	defb	'X'
-223   0111              	defw	__printf_handle_X
-224   0111              ENDIF
-225   0111              
-226   0111              IF CLIB_OPT_PRINTF & $80080
-227   0111              	defb	'p'
-228   0111              	defw	__printf_handle_x
-229   0111              ENDIF
-230   0111              
-231   0111              IF CLIB_OPT_PRINTF & $100100
-232   0111              	defb	'B'
-233   0111              	defw	__printf_handle_B
-234   0111              ENDIF
-235   0111              
-236   0111              IF CLIB_OPT_PRINTF  & $10010
-237   0111              	defb	'o'
-238   0111              	defw	__printf_handle_o
-239   0111              ENDIF
-240   0111              
-241   0111              IF CLIB_OPT_PRINTF & $20020
-242   0111              	defb	'n'
-243   0111              	defw	__printf_handle_n
-244   0111              ENDIF
-245   0111              
-246   0111              IF CLIB_OPT_PRINTF & $200
-247   0111              	defb	's'
-248   0111              	defw	__printf_handle_s
-249   0111              ENDIF
-250   0111              
-251   0111              IF CLIB_OPT_PRINTF & $400
-252   0111              	defb	'c'
-253   0111              	defw	__printf_handle_c
-254   0111              ENDIF
-255   0111              
-256   0111              IF CLIB_OPT_PRINTF & $4000000
-257   0111              	defb	'f'
-258   0111              	defw	__printf_handle_f
-259   0111              ENDIF
-260   0111              
-261   0111              IF CLIB_OPT_PRINTF  & $1000000
-262   0111              	defb	'e'
-263   0111              	defw	__printf_handle_e
-264   0111              ENDIF
-265   0111              IF CLIB_OPT_PRINTF & $10000000
-266   0111              	defb	'g'
-267   0111              	defw	__printf_handle_f
-268   0111              ENDIF
-269   0111              IF CLIB_OPT_PRINTF_2
-270   0111              	defb	'l'
-271   0111              	defw	__printf_handle_ll
-272   0111              ENDIF
-273   0111              	defb	0	;end marker
-274   0111              
-275   0111              __printf_format_table64:
-276   0111              
-277   0111              IF CLIB_OPT_PRINTF_2 & $02
-278   0111              	defb	'u'
-279   0111              	defw	__printf_handle_llu
-280   0111              ENDIF
-281   0111              
-282   0111              IF CLIB_OPT_PRINTF_2 & $01
-283   0111              	defb	'd'
-284   0111              	defw	__printf_handle_lld
-285   0111              ENDIF
-286   0111              
-287   0111              IF CLIB_OPT_PRINTF_2 & $04
-288   0111              	defb	'x'
-289   0111              	defw	__printf_handle_llx
-290   0111              ENDIF
-291   0111              
-292   0111              IF CLIB_OPT_PRINTF_2 & $08
-293   0111              	defb	'X'
-294   0111              	defw	__printf_handle_llX
-295   0111              ENDIF
-296   0111              IF CLIB_OPT_PRINTF_2  & $10
-297   0111              	defb	'o'
-298   0111              	defw	__printf_handle_llo
-299   0111              ENDIF
-300   0111              IF CLIB_OPT_PRINTF_2 & $100
-301   0111              	defb	'B'
-302   0111              	defw	__printf_handle_llB
-303   0111              ENDIF
-304   0111              	defb	0	;endmarker
-305   0111              
-306   0111              
-307   0111              
-308   0111              IF CLIB_OPT_PRINTF & $40000000
-309   0111              	EXTERN	__printf_get_flags_impl
-310   0111              	PUBLIC	__printf_get_flags
-311   0111              	defc	__printf_get_flags = __printf_get_flags_impl
-312   0111              ELSE
-313   0111              	EXTERN	__printf_get_flags_noop
-314   0111              	PUBLIC	__printf_get_flags
-315   0111              	defc	__printf_get_flags = __printf_get_flags_noop
-316   0111              ENDIF
-317   0111              
-318   0111              ENDIF
-319   0111              
-320   0111              
-321   0111              ;--------
-322   0111              ; Allow a compile time switch between native output and ANSI terminal
-323   0111              ;
-324   0111              ; -pragma-need=ansiterminal
-325   0111              ;--------
-326   0111              
-327   0111              IF NEED_ansiterminal
-328   0111              	PUBLIC		fputc_cons
-329   0111              	EXTERN		fputc_cons_ansi
-330   0111              	EXTERN		puts_cons_ansi
-331   0111              	defc DEFINED_fputc_cons = 1
-332   0111              	defc DEFINED_puts_cons = 1
-333   0111              	defc fputc_cons = fputc_cons_ansi
-334   0111              
-335   0111              	; Bridge VT100 to gencon
-336   0111                      IF DEFINED_CLIB_ANSITERMINAL_BRIDGE & CLIB_ANSITERMINAL_BRIDGE != 0
-337   0111                          PUBLIC ansi_attr
-338   0111                          PUBLIC ansi_BEL
-339   0111                          PUBLIC ansi_cls
-340   0111                          PUBLIC ansi_CHAR
-341   0111                          PUBLIC ansi_del_line
-342   0111                          PUBLIC ansi_SCROLLUP
-343   0111                          EXTERN __gencon_ansi_attr
-344   0111                          EXTERN __gencon_ansi_BEL
-345   0111                          EXTERN __gencon_ansi_cls
-346   0111                          EXTERN __gencon_ansi_CHAR
-347   0111                          EXTERN __gencon_ansi_del_line
-348   0111                          EXTERN __gencon_ansi_SCROLLUP
-349   0111                          defc ansi_attr = __gencon_ansi_attr
-350   0111                          defc ansi_BEL = __gencon_ansi_BEL
-351   0111                          defc ansi_cls = __gencon_ansi_cls
-352   0111                          defc ansi_CHAR = __gencon_ansi_CHAR
-353   0111                          defc ansi_del_line = __gencon_ansi_del_line
-354   0111                          defc ansi_SCROLLUP = __gencon_ansi_SCROLLUP
-355   0111              
-356   0111                          ; We're using gencon, don't include an ANSIfont
-357   0111                          UNDEFINE TAR__no_ansifont
-358   0111                          defc TAR__no_ansifont = 1
-359   0111              	    IF !DEFINED_ansicolumns
-360   0111                              defc ansicolumns = CONSOLE_COLUMNS
-361   0111                              defc DEFINED_ansicolumns = 1
-362   0111                          ENDIF
-363   0111                      ENDIF
-364   0111              
-365   0111                     	PUBLIC ansicolumns
-366   0111              
-367   0111              	IF !TAR__no_ansifont
-368   0111                      	PUBLIC ansicharacter_pixelwidth
-369   0111              		PUBLIC ansifont
-370   0111                      	PUBLIC ansifont_is_packed
-371   0111                      ELSE
-372   0111                              defc DEFINED_ansifont = 1
-373   0111              	ENDIF
-374   0111              
-375   0111              	IF !ansipixels
-376   0111              		defc ansipixels = 256
-377   0111              	ENDIF
-378   0111              
-379   0111              	IF !DEFINED_ansicolumns
-380   0111              		 defc ansicolumns = 64
-381   0111              	ENDIF
-382   0111              
-383   0111              	UNDEFINE CONSOLE_COLUMNS
-384   0111              	defc CONSOLE_COLUMNS = ansicolumns
-385   0111              
-386   0111              	IF DEFINED_ansirows
-387   0111              		UNDEFINE CONSOLE_ROWS
-388   0111              		defc CONSOLE_ROWS = ansirows
-389   0111              	ENDIF
-390   0111              
-391   0111              
-392   0111              	IF (ansicolumns = (ansipixels/2))
-393   0111              	    defc ansicharacter_pixelwidth = 2
-394   0111                          IF !DEFINED_ansifont
-395   0111                          	EXTERN ansifont_f4pack
-396   0111              	    	defc ansifont = ansifont_f4pack
-397   0111                          	defc ansifont_is_packed = 1
-398   0111                          ENDIF
-399   0111              	ENDIF
-400   0111              	IF (ansicolumns = (ansipixels/3))
-401   0111              	    defc ansicharacter_pixelwidth = 3
-402   0111                          IF !DEFINED_ansifont
-403   0111                              EXTERN ansifont_f4pack
-404   0111              	        defc ansifont = ansifont_f4pack
-405   0111                              defc ansifont_is_packed = 1
-406   0111              	    ENDIF
-407   0111              	ENDIF
-408   0111              	IF (ansicolumns = (ansipixels/4))
-409   0111              	    defc ansicharacter_pixelwidth = 4
-410   0111                          IF !DEFINED_ansifont
-411   0111                              EXTERN ansifont_f4pack
-412   0111              	        defc ansifont = ansifont_f4pack
-413   0111                              defc ansifont_is_packed = 1
-414   0111              	    ENDIF
-415   0111              	ENDIF
-416   0111              	IF (ansicolumns = (ansipixels/5))
-417   0111              	    defc ansicharacter_pixelwidth = 5
-418   0111                          IF !DEFINED_ansifont
-419   0111                              EXTERN ansifont_f5
-420   0111              	        defc ansifont = ansifont_f5
-421   0111                              defc ansifont_is_packed = 0
-422   0111              	    ENDIF
-423   0111              	ENDIF
-424   0111              	IF (ansicolumns = (ansipixels/6))
-425   0111              	    defc ansicharacter_pixelwidth = 6
-426   0111                          IF !DEFINED_ansifont
-427   0111                              EXTERN ansifont_f6
-428   0111              	        defc ansifont = ansifont_f6
-429   0111                              defc ansifont_is_packed = 0
-430   0111              	    ENDIF
-431   0111              	ENDIF
-432   0111              	IF (ansicolumns = (ansipixels/7))
-433   0111              	    defc ansicharacter_pixelwidth = 7
-434   0111                          IF !DEFINED_ansifont
-435   0111                              EXTERN ansifont_f8
-436   0111              	        defc ansifont = ansifont_f8
-437   0111                              defc ansifont_is_packed = 0
-438   0111              	    ENDIF
-439   0111              	ENDIF
-440   0111              	IF (ansicolumns = (ansipixels/8))
-441   0111              	    defc ansicharacter_pixelwidth = 8
-442   0111                          IF !DEFINED_ansifont
-443   0111                              EXTERN ansifont_f8
-444   0111              	        defc ansifont = ansifont_f8
-445   0111                              defc ansifont_is_packed = 0
-446   0111              	    ENDIF
-447   0111              	ENDIF
-448   0111              	IF (ansicolumns = (ansipixels/9))
-449   0111              	    defc ansicharacter_pixelwidth = 9
-450   0111                          IF !DEFINED_ansifont
-451   0111                              EXTERN ansifont_f8
-452   0111              	        defc ansifont = ansifont_f8
-453   0111                              defc ansifont_is_packed = 0
-454   0111              	    ENDIF
-455   0111              	ENDIF
-456   0111              
-457   0111              	IF (ansipixels = 512)
-458   0111              		IF (ansicolumns = 48)
-459   0111              			defc ansicharacter_pixelwidth = 9
-460   0111              			IF !DEFINED_ansifont
-461   0111              				EXTERN ansifont_f8
-462   0111              				defc ansifont = ansifont_f8
-463   0111              				defc ansifont_is_packed = 0
-464   0111              			ENDIF
-465   0111              		ENDIF
-466   0111              		IF (ansicolumns = 80)
-467   0111              			defc ansicharacter_pixelwidth = 6
-468   0111              			IF !DEFINED_ansifont
-469   0111              				EXTERN ansifont_f6
-470   0111              				defc ansifont = ansifont_f6
-471   0111              				defc ansifont_is_packed = 0
-472   0111              			ENDIF
-473   0111              		ENDIF
-474   0111              		IF (ansicolumns = 160)
-475   0111              			defc ansicharacter_pixelwidth = 3
-476   0111              			IF !DEFINED_ansifont
-477   0111              				EXTERN ansifont_f4pack
-478   0111              				defc ansifont = ansifont_f4pack
-479   0111              				defc ansifont_is_packed = 1
-480   0111              			ENDIF
-481   0111              		ENDIF
-482   0111              	ENDIF
-483   0111              
-484   0111              	IF (ansipixels = 256)
-485   0111              		IF (ansicolumns = 24)
-486   0111              			defc ansicharacter_pixelwidth = 9
-487   0111              			IF !DEFINED_ansifont
-488   0111              				EXTERN ansifont_f8
-489   0111              				defc ansifont = ansifont_f8
-490   0111              				defc ansifont_is_packed = 0
-491   0111              			ENDIF
-492   0111              		ENDIF
-493   0111              		IF (ansicolumns = 40)
-494   0111              			defc ansicharacter_pixelwidth = 6
-495   0111              			IF !DEFINED_ansifont
-496   0111              				EXTERN ansifont_f6
-497   0111              				defc ansifont = ansifont_f6
-498   0111              				defc ansifont_is_packed = 0
-499   0111              			ENDIF
-500   0111              		ENDIF
-501   0111              		IF (ansicolumns = 80)
-502   0111              			defc ansicharacter_pixelwidth = 3
-503   0111              			IF !DEFINED_ansifont
-504   0111              				EXTERN ansifont_f4pack
-505   0111              				defc ansifont = ansifont_f4pack
-506   0111              				defc ansifont_is_packed = 1
-507   0111              			ENDIF
-508   0111              		ENDIF
-509   0111              	ENDIF
-510   0111              
-511   0111              ENDIF
-512   0111              
-513   0111              ; If it's not been overridden by anybody, lets use the native output
-514   0111              IF !DEFINED_fputc_cons
-515   0111              	PUBLIC		fputc_cons
-516   0111              	defc DEFINED_fputc_cons = 1
-517   0111                      IF !TAR__fputc_cons_generic
-518   0111              	     EXTERN	fputc_cons_native
-519   0111                	     defc fputc_cons = fputc_cons_native
-520   0111                      ELSE
-521   0111              	     EXTERN	fputc_cons_generic
-522   0111                	     defc fputc_cons = fputc_cons_generic
-523   0111                      ENDIF
-524   0111              ENDIF
-525   0111              
-526   0111              IF DEFINED_fputc_cons
-527   0111              	PUBLIC		_fputc_cons
-528   0111              	defc		_fputc_cons = fputc_cons
-529   0111              
-530   0111              ENDIF
-531   0111              
-532   0111              IF !DEFINED_getk
-533   0111                 IF !DEFINED_fgetc_cons
-534   0111                    IF TAR__fgetc_cons_inkey
-535   0111                        EXTERN fgetc_cons_inkey
-536   0111                        EXTERN getk_inkey
-537   0111                        PUBLIC fgetc_cons
-538   0111                        PUBLIC _fgetc_cons
-539   0111                        PUBLIC getk
-540   0111                        PUBLIC _getk
-541   0111                        defc fgetc_cons = fgetc_cons_inkey
-542   0111                        defc _fgetc_cons = fgetc_cons_inkey
-543   0111                        defc getk = getk_inkey
-544   0111                        defc _getk = getk_inkey
-545   0111                    ENDIF
-546   0111                 ENDIF
-547   0111              ENDIF
-548   0111              
-549   0111              IF DEFINED_fgetc_cons
-550   0111                IF !DEFINED__fgetc_cons
-551   0111                    PUBLIC _fgetc_cons
-552   0111                    defc _fgetc_cons = fgetc_cons
-553   0111                ENDIF
-554   0111              ENDIF
-555   0111              
-556   0111              IF DEFINED_getk
-557   0111                IF !DEFINED__getk
-558   0111                    PUBLIC _getk
-559   0111                    defc _getk = getk
-560   0111                ENDIF
-561   0111              ENDIF
-562   0111              
-563   0111              
-564   0111              ;TODO: These need to go into rules
-565   0111              IF CONSOLE_COLUMNS
-566   0111              	PUBLIC CONSOLE_COLUMNS
-567   0111              ENDIF
-568   0111              IF CONSOLE_ROWS
-569   0111              	PUBLIC CONSOLE_ROWS
-570   0111              ENDIF
-571   0111              
-572   0111              IF !CONSOLE_XOFFSET
-573   0111                  defc CONSOLE_XOFFSET = 0
-574   0111              ENDIF
-575   0111              PUBLIC CONSOLE_XOFFSET
-576   0111              IF !CONSOLE_YOFFSET
-577   0111                  defc CONSOLE_YOFFSET = 0
-578   0111              ENDIF
-579   0111              PUBLIC CONSOLE_YOFFSET
-580   0111              
-581   0111              IF !CLIB_KBHIT_NOSTORE
-582   0111                  defc CLIB_KBHIT_NOSTORE = 0
-583   0111              ENDIF
-584   0111              PUBLIC CLIB_KBHIT_NOSTORE
-585   0111              
-586   0111              
-587   0111              
-241   0111                  INCLUDE	"crt/classic/crt_section.asm"
-1     0111              ; Memory map and section setup
-2     0111              ;
-3     0111              ; Contains the generic variables + features
-4     0111              
-5     0111              ;
-6     0111              ; crt_model = 0		; everything in RAM
-7     0111              ; crt_model = 1		; ROM model, data section copied
-8     0111              ; crt_model = 2		; ROM model, data section compressed with zx7
-9     0111              ; crt_model = 3		; ROM model, data section compressed with zx0
-10    0111              
-11    0111              ; Include the default memory map. You can override this
-12    0111              
-13    0111              IF __MMAP == -1
-14    0111                  ; The user has supplied a memory map.
-15    0111                  INCLUDE	"./mmap.inc"
-16    0111              ELSE
-17    0111                  ; Include the standard memory map
-18    0111                  INCLUDE	"crt/classic/crt_section_standard.asm"
-1     0111              ; Classic Memory map and section setup
-2     0111              ;
-3     0111              ; This layout suits all the classic machines. Memory placement is
-4     0111              ; affected by:
-5     0111              ;
-6     0111              ; CRT_MODEL: RAM/ROM configuration
-7     0111              ; CRT_ORG_CODE: Where code starts executing from
-8     0111              ; CRT_ORG_BSS:  Where uninitialised global variables are placed
-9     0111              ; CRT_ORG_GRAPHICS: Where graphics routines + variables are stored (certain ports only)
-10    0111              
-11    0111              ;
-12    0111              ; Contains the generic variables + features
-13    0111              
-14    0111              ;
-15    0111              ; crt_model = 0		; everything in RAM
-16    0111              ; crt_model = 1		; ROM model, data section copied
-17    0111              ; crt_model = 2		; ROM model, data section compressed (zx7)
-18    0111              ; crt_model = 3		; ROM model, data section compressed (zx0)
-19    0111              
-20    0111              
-21    0111              
-22    0111                  INCLUDE "crt/classic/crt_section_code.inc"
-1     0111              ; CODE sections defined by the classic library
-2     0111              
-3     0111                  SECTION CODE
+1     004F              
+2     004F              ; Optional definition for auto MALLOC init
+3     004F              ; it assumes we have free space between the end of
+4     004F              ; the compiled program and the stack pointer
+5     004F              
+6     004F              ; It works only with a _heap pointer defined somewhere else in the crt0.
+7     004F              ; Such (long) pointer will hold, at startup, the (word) value of ASMTAIL
+8     004F              ; that points to the last used byte in the compiled program:
+9     004F              
+10    004F              ;IF DEFINED_USING_amalloc
+11    004F              ;EXTERN ASMTAIL
+12    004F              ;PUBLIC _heap
+13    004F              ;._heap
+14    004F              ;   defw ASMTAIL    ; Location of the last program byte
+15    004F              ;   defw 0
+16    004F              ;ENDIF
+17    004F              
+18    004F              
+19    004F              ; $Id: amalloc.def,v 1.4 2016-07-14 17:44:17 pauloscustodio Exp $
+20    004F              
+21    004F              IF CRT_MAX_HEAP_ADDRESS
+22    004F                  ld      hl,CRT_MAX_HEAP_ADDRESS
+23    004F              ELSE
+24    004F  21 00 00 39     ld      hl,sp
+25    0053              ENDIF
+26    0053                  ; HL must hold SP or the end of free memory
+27    0053  E5              push    hl
+28    0054              
+29    0054  21 69 00        ld      hl,_heap
+30    0057  4E              ld      c,(hl)
+31    0058  23              inc     hl
+32    0059  46              ld      b,(hl)
+33    005A  03              inc     bc
+34    005B                  ; compact way to do "mallinit()"
+35    005B  AF              xor     a
+36    005C  77              ld      (hl),a
+37    005D  2B              dec     hl
+38    005E  77              ld      (hl),a
+39    005F              
+40    005F  E1              pop     hl      ; sp
+41    0060              
+42    0060              IF __CPU_8085__
+43    0060                  sub     hl,bc   ; hl = total free memory
+44    0060              ELIF __CPU_8080__ || __CPU_GBZ80
+45    0060                  ld      a,l
+46    0060                  sub     c
+47    0060                  ld      l,a
+48    0060                  ld      a,h
+49    0060                  sbc     b
+50    0060                  ld      h,a
+51    0060              ELSE
+52    0060  ED 42           sbc     hl,bc   ; hl = total free memory
+53    0062              ENDIF
+54    0062              
+55    0062  54 5D           ld      de,hl
+56    0064              
+57    0064              IF __CPU_8085__
+58    0064                  sra     hl
+59    0064                  sra     hl
+60    0064                  ld      a,$3F
+61    0064                  and     h
+62    0064                  ld      h,a
+63    0064                  ex      de,hl
+64    0064              ELIF __CPU_8080__ || __CPU_GBZ80
+65    0064                  and     a
+66    0064                  ld      a,d
+67    0064                  rra
+68    0064                  ld      d,a
+69    0064                  ld      a,e
+70    0064                  rra
+71    0064                  ld      e,a
+72    0064                  and     a
+73    0064                  ld      a,d
+74    0064                  rra
+75    0064                  ld      d,a
+76    0064                  ld      a,e
+77    0064                  rra
+78    0064                  ld      e,a
+79    0064              ELSE
+80    0064  CB 3A           srl     d
+81    0066  CB 1B           rr      e
+82    0068  CB 3A           srl     d
+83    006A  CB 1B           rr      e
+84    006C              ENDIF
+85    006C              
+86    006C              IF __CPU_INTEL__ || __CPU_GBZ80__
+87    006C              
+88    006C              IF DEFINED_USING_amalloc_2
+89    006C                  ld      a,l     ;  leave 2/4 of the free memory for the stack
+90    006C                  sub     e
+91    006C                  ld      l,a
+92    006C                  ld      a,h
+93    006C                  sbc     d
+94    006C                  ld      h,a
+95    006C              IF DEFINED_USING_amalloc_1
+96    006C                  ld      a,l     ;  leave 3/4 of the free memory for the stack
+97    006C                  sub     e
+98    006C                  ld      l,a
+99    006C                  ld      a,h
+100   006C                  sbc     d
+101   006C                  ld      h,a
+102   006C              ENDIF
+103   006C              ENDIF
+104   006C                  ld      a,l     ;  leave 1/4 of the free memory for the stack
+105   006C                  sub     e
+106   006C                  ld      l,a
+107   006C                  ld      a,h
+108   006C                  sbc     d
+109   006C                  ld      h,a
+110   006C              
+111   006C              ELSE
+112   006C              
+113   006C              IF DEFINED_USING_amalloc_2
+114   006C                  sbc     hl,de   ;  leave 2/4 of the free memory for the stack
+115   006C              IF DEFINED_USING_amalloc_1
+116   006C                  sbc     hl,de   ;  leave 3/4 of the free memory for the stack
+117   006C              ENDIF
+118   006C              ENDIF
+119   006C              
+120   006C  ED 52           sbc     hl,de   ;  leave 1/4 of the free memory for the stack
+121   006E              ENDIF
+122   006E              
+123   006E  C5              push    bc      ; main address for malloc area
+124   006F  E5              push    hl      ; area size
+125   0070                  EXTERN  sbrk_callee
+126   0070  CD 00 00        call    sbrk_callee
+127   0073              
+144   0073              ENDIF
+145   0073              
+146   0073              IF CRT_ENABLE_COMMANDLINE = 1
+147   0073  21 80 00        ld      hl,$80
+148   0076  7E              ld      a,(hl)
+149   0077                  ;ld      b,0
+150   0077  44              ld      b,h
+151   0078  A7              and     a
+152   0079  CA F5 00        jp      z,argv_done
+153   007C                  ;inc	hl
+154   007C  4F              ld      c,a
+155   007D  09              add     hl,bc   ;now points to the end of the command line
+156   007E  0D              dec     c
+157   007F                  INCLUDE	"crt/classic/crt_command_line.asm"
+1     007F              ; Command line parsing
+2     007F              
+3     007F              ; Push pointers to argv[n] onto the stack now
+4     007F              ; We must start from the end
+5     007F              ; Entry:  hl = end of arguments
+6     007F              ;	   c = length of arguments
+7     007F              ;	   b = 0
+8     007F              ; Exit:	  bc = argc
+9     007F              ;         hl = argv
+10    007F              
+11    007F              IF CRT_ENABLE_COMMANDLINE = 1
+12    007F  18 04           jr      argv_begin
+13    0081              
+14    0081  77 00       redir_fopen_flag:		defb	'w',0
+15    0083  72          redir_fopen_flagr:		defb	'r'
+16    0084  00          commandline_argv0:		defb	0
+17    0085              
+18    0085              argv_begin:
+19    0085  11 00 00        ld      de,0	;NULL pointer at end of array, just in case
+20    0088  D5              push    de
+21    0089              ; Try to find the end of the arguments
+22    0089              argv_loop_1:
+23    0089  7E              ld      a,(hl)          ;Strip off trailing spaces
+24    008A  FE 20           cp      ' '
+25    008C  20 06           jr      nz,argv_loop_2
+26    008E  36 00           ld      (hl),0
+27    0090  2B              dec     hl
+28    0091  0D              dec     c
+29    0092  20 F5           jr      nz,argv_loop_1
+30    0094              ; We've located the end of the last argument, try to find the start
+31    0094              argv_loop_2:
+32    0094  7E              ld      a,(hl)
+33    0095  FE 20           cp      ' '
+34    0097  20 58           jr      nz,argv_loop_3
+35    0099  23              inc     hl              ; We're now on the first character of the argument
+36    009A  0C              inc     c
+37    009B              IF CRT_COMMANDLINE_REDIRECTION = 1
+38    009B                      EXTERN freopen
+39    009B  AF                  xor     a
+40    009C  80                  add     b
+41    009D  20 25               jr      nz,no_redir_stdout
+42    009F  7E                  ld      a,(hl)
+43    00A0  FE 3E               cp      '>'
+44    00A2  20 20               jr      nz,no_redir_stdout
+45    00A4  E5                  push    hl
+46    00A5  23                  inc     hl
+47    00A6  BE                  cp      (hl)
+48    00A7  2B                  dec     hl
+49    00A8  11 81 00            ld      de,redir_fopen_flag	; "a" or "w"
+50    00AB  20 04               jr      nz,noappendb
+51    00AD  3E 61               ld      a,'a'
+52    00AF  12                  ld      (de),a
+53    00B0  23                  inc     hl
+54    00B1              noappendb:
+55    00B1  23                  inc     hl
+56    00B2              
+57    00B2  C5                  push    bc
+58    00B3  E5                  push    hl					; file name ptr
+59    00B4  D5                  push    de
+60    00B5  11 0A 00            ld      de,__sgoioblk+10		; file struct for stdout
+61    00B8  D5                  push    de
+62    00B9  CD 00 00            call    freopen
+63    00BC  D1                  pop     de
+64    00BD  D1                  pop     de
+65    00BE  E1                  pop     hl
+66    00BF  C1                  pop     bc
+67    00C0  E1                  pop     hl
+68    00C1  2B                  dec     hl
+69    00C2  18 20               jr      argv_zloop
+70    00C4              no_redir_stdout:
+71    00C4  7E                  ld      a,(hl)
+72    00C5  FE 3C               cp      '<'
+73    00C7  20 17               jr      nz,no_redir_stdin
+74    00C9  E5                  push    hl
+75    00CA  23                  inc     hl
+76    00CB  11 83 00            ld      de,redir_fopen_flagr
+77    00CE  C5                  push    bc
+78    00CF  E5                  push    hl					; file name ptr
+79    00D0  D5                  push    de
+80    00D1  11 00 00            ld      de,__sgoioblk		; file struct for stdin
+81    00D4  D5                  push    de
+82    00D5  CD 00 00            call    freopen
+83    00D8  D1                  pop     de
+84    00D9  D1                  pop     de
+85    00DA  E1                  pop     hl
+86    00DB  C1                  pop     bc
+87    00DC  E1                  pop     hl
+88    00DD  2B                  dec	    hl
+89    00DE  18 04               jr      argv_zloop
+90    00E0              no_redir_stdin:
+91    00E0              ENDIF
+92    00E0  E5              push    hl
+93    00E1  04              inc     b
+94    00E2              empty_arg:
+95    00E2  2B              dec     hl
+96    00E3  0D              dec     c
+97    00E4              ; skip extra blanks
+98    00E4              argv_zloop:
+99    00E4  36 00           ld      (hl),0      ;Terminate the previous argument
+100   00E6  2B              dec     hl          ;Last character of previous argument
+101   00E7  0D              dec     c
+102   00E8  28 0B           jr      z,argv_done
+103   00EA  7E              ld      a,(hl)
+104   00EB  FE 20           cp      ' '
+105   00ED  28 F5           jr      z,argv_zloop ;Skip over multiple spaces
+106   00EF  18 A3           jr      argv_loop_2  ;And do the next argument
+107   00F1              
+108   00F1              argv_loop_3:
+109   00F1  2B              dec     hl
+110   00F2  0D              dec     c
+111   00F3  20 9F           jr      nz,argv_loop_2
+112   00F5              
+113   00F5              argv_done:
+114   00F5                  ; We may still have an argument left (if it was at the start of the buffer)
+115   00F5              
+116   00F5              argv_push_final_arg:
+117   00F5  7E              ld      a,(hl)              ;Strip leading spaces
+118   00F6  FE 20           cp      ' '
+119   00F8  20 03           jr      nz,argv_push_final_arg2
+120   00FA  23              inc     hl
+121   00FB  18 F8           jr      argv_push_final_arg
+122   00FD              argv_push_final_arg2:
+123   00FD  D1              pop     de                  ;Is it the same as the last argument we pushed?
+124   00FE  D5              push    de
+125   00FF  7C              ld      a,h
+126   0100  92              sub     d
+127   0101  20 04           jr      nz,argv_push_final_arg3
+128   0103  7D              ld      a,l
+129   0104  93              sub     e
+130   0105  28 06           jr      z,argv_done_2
+131   0107              argv_push_final_arg3:
+132   0107  7E              ld      a,(hl)
+133   0108  A7              and     a
+134   0109  28 02           jr      z,argv_done_2
+135   010B  E5              push    hl
+136   010C  04              inc     b
+137   010D              
+138   010D              argv_done_2:
+139   010D  21 84 00        ld      hl,commandline_argv0	;name of program (NULL)
+140   0110  E5              push    hl
+141   0111  04              inc     b
+142   0112  21 00 00        ld      hl,0
+143   0115  39              add     hl,sp	;address of argv
+144   0116  48              ld      c,b
+145   0117  06 00           ld      b,0
+146   0119              ELSE
+147   0119                  ld      hl,0    ;argv
+148   0119                  ld      b,h     ;argc
+149   0119                  ld      c,l
+150   0119              ENDIF
+151   0119              
+152   0119              
+153   0119              
+158   0119  E5              push    hl	;argv
+159   011A  C5              push    bc	;argc
+160   011B              ELSE
+161   011B                  ld      hl,0
+162   011B                  push    hl  ;argv
+163   011B                  push    hl  ;argc
+164   011B              ENDIF
+165   011B  CD 00 00        call    _main		;Call user code
+166   011E  C1              pop     bc	;kill argv
+167   011F  C1              pop     bc	;kill argc
+168   0120              
+169   0120  3A 5F 02        ld      a,(defltdsk)	;Restore default disc
+170   0123  5F              ld      e,a
+171   0124  0E 0E           ld      c,14
+172   0126  CD 05 00        call    5
+173   0129              
+174   0129              cleanup:
+175   0129  E5              push    hl		;Save return value
+176   012A  CD 00 00        call    crt0_exit
+177   012D  C1              pop     bc		;Get exit() value into bc
+178   012E              start1:
+179   012E  31 00 00        ld      sp,0		;Pick up entry sp
+180   0131  C3 00 00        jp      0
+181   0134              
+182   0134  E9          l_dcal:	jp	(hl)		;Used for call by function ptr
+183   0135              
+184   0135              ; Memory banking for Spectrum +3
+185   0135              IF (startup=3)
+186   0135                  PUBLIC	pixelbyte
+187   0135              pixelbyte:	defb	0		; temp byte storage for VDP driver
+188   0135              
+189   0135              p3_poke:
+190   0135              		jp 0
+191   0135              
+192   0135              p3_peek:
+193   0135              		jp 0
+194   0135              
+195   0135              pokebyte_code:
+196   0135              		di
+197   0135              		; ..$15 00010101 -> banks 4,5,6,3
+198   0135              		; ..$11 00010001 -> banks 0,1,2,3 (TPA)
+199   0135              		ex  af,af
+200   0135              		ld	a,$15
+201   0135              		;ld	a,$0D
+202   0135              		;ld	a,$05
+203   0135              		ld bc,$1ffd
+204   0135              		out(c),a
+205   0135              		ex af,af
+206   0135              		ld (hl),a
+207   0135              		ld	a,$11		; avoid using ($FF01) to be compatible with CP/M 2.2
+208   0135              		;ld	a,$09
+209   0135              		;ld	a,$01
+210   0135              		;ld	a,($FF01)	; saved value
+211   0135              		out(c),a
+212   0135              		ei
+213   0135              		ret
+214   0135              		; adjust code size
+215   0135              		nop
+216   0135              peekbyte_code:
+217   0135              		di
+218   0135              		; ..$15 00010101 -> banks 4,5,6,3
+219   0135              		; ..$11 00010001 -> banks 0,1,2,3 (TPA)
+220   0135              		ld	a,$15
+221   0135              		;ld	a,$0D
+222   0135              		;ld	a,$05
+223   0135              		ld bc,$1ffd
+224   0135              		out(c),a
+225   0135              		ld a,(hl)
+226   0135              		ex  af,af
+227   0135              		ld	a,$11		; avoid using ($FF01) to be compatible with CP/M 2.2
+228   0135              		;ld	a,$09
+229   0135              		;ld	a,$01
+230   0135              		;ld	a,($FF01)	; saved value
+231   0135              		out(c),a
+232   0135              		ex  af,af
+233   0135              		ei
+234   0135              		ret
+235   0135              		; adjust code size
+236   0135              		nop
+237   0135              ENDIF
+238   0135              
+239   0135              
+240   0135                  INCLUDE "crt/classic/crt_runtime_selection.asm"
+1     0135              ;
+2     0135              ; Allow selection of the library functions at linktime
+3     0135              ;
+4     0135              ; Included by crt0 files
+5     0135              ;
+6     0135              
+7     0135              
+8     0135              ; scanf format picker
+9     0135              
+10    0135              ; Compatibility with the new library format picker. The classic library
+11    0135              ; implements several of these together so there's an element of grouping.
+12    0135              ;
+13    0135              ; Default is to enable all converters except for float.
+14    0135              ;
+15    0135              ; Use -pragma-define:CLIB_OPT_SCANF=0x..... to control formatters
+16    0135              ;
+17    0135              ; bit 0 =  $    01 = enable %d
+18    0135              ; bit 1 =  $    02 = enable %u
+19    0135              ; bit 2 =  $    04 = enable %x
+20    0135              ; bit 3 =  $    08 = enable %X (duplicate)
+21    0135              ; bit 4 =  $    10 = enable %o
+22    0135              ; bit 5 =  $    20 = enable %n
+23    0135              ; bit 6 =  $    40 = enable %i
+24    0135              ; bit 7 =  $    80 = enable %p
+25    0135              ; bit 8 =  $   100 = enable %B
+26    0135              ; bit 9 =  $   200 = enable %s
+27    0135              ; bit 10 = $   400 = enable %c
+28    0135              ; * bit 11 = $   800 = enable %I
+29    0135              ; bit 12 = $  1000 = enable %ld
+30    0135              ; bit 13 = $  2000 = enable %lu
+31    0135              ; bit 14 = $  4000 = enable %lx
+32    0135              ; bit 15 = $  8000 = enable %lX (duplicate)
+33    0135              ; bit 16 = $ 10000 = enable %lo
+34    0135              ; bit 17 = $ 20000 = enable %ln
+35    0135              ; bit 18 = $ 40000 = enable %li
+36    0135              ; bit 19 = $ 80000 = enable %lp
+37    0135              ; bit 20 = $100000 = enable %lB
+38    0135              ; * bit 21 = $200000 = enable %[
+39    0135              ; * bit 22 = $  400000 = enable %a
+40    0135              ; * bit 23 = $  800000 = enable %A
+41    0135              ; bit 24 = $ 1000000 = enable %e
+42    0135              ; bit 25 = $ 2000000 = enable %E
+43    0135              ; bit 26 = $ 4000000 = enable %f
+44    0135              ; bit 27 = $ 8000000 = enable %F
+45    0135              ; bit 28 = $10000000 = enable %g
+46    0135              ; bit 29 = $20000000 = enable %G
+47    0135              ; bit 30 = $40000000 = enable flags handling
+48    0135              
+49    0135              IF DEFINED_CLIB_OPT_SCANF
+50    0135              	; User has specified the configuration level - force scanf to be included
+51    0135              	UNDEFINE NEED_scanf
+52    0135              	DEFINE NEED_scanf
+53    0135              ELSE
+54    0135              	IF DEFINED_CRT_scanf_format
+55    0135              	    ;Only defined as part of sccz80
+56    0135              	    defc CLIB_OPT_SCANF = CRT_scanf_format
+57    0135                      ELSE
+58    0135              	    ; TODO: Some default configurations
+59    0135                      ENDIF
+60    0135              ENDIF
+61    0135              
+62    0135              
+63    0135              IF NEED_scanf
+64    0135              	PUBLIC	__scanf_format_table
+65    0135              	EXTERN	__scanf_handle_d
+66    0135              	EXTERN	__scanf_handle_u
+67    0135              	EXTERN	__scanf_handle_o
+68    0135              	EXTERN	__scanf_handle_x
+69    0135              	EXTERN	__scanf_handle_p
+70    0135              	EXTERN	__scanf_handle_B
+71    0135              	EXTERN	__scanf_handle_f
+72    0135              	EXTERN	__scanf_handle_s
+73    0135              	EXTERN	__scanf_handle_c
+74    0135              	EXTERN	__scanf_handle_n
+75    0135              	EXTERN	__scanf_handle_i
+76    0135              	EXTERN	__scanf_noop
+77    0135              
+78    0135              __scanf_format_table:
+79    0135              IF CLIB_OPT_SCANF & $40040
+80    0135              	defb	'i'
+81    0135              	defw	__scanf_handle_i
+82    0135              	defc	temp_CLIB_OPT_SCANF = CLIB_OPT_SCANF
+83    0135              	UNDEFINE CLIB_OPT_SCANF
+84    0135              	defc	CLIB_OPT_SCANF = temp_CLIB_OPT_SCANF | 0x3003 | 0x8c08c | 0x10010 | 0x100100
+85    0135              ENDIF
+86    0135              
+87    0135              
+88    0135              
+89    0135              IF CLIB_OPT_SCANF & $2002
+90    0135              	defb	'u'
+91    0135              	defw	__scanf_handle_u
+92    0135              ENDIF
+93    0135              
+94    0135              IF CLIB_OPT_SCANF & $1001
+95    0135              	defb	'd'
+96    0135              	defw	__scanf_handle_d
+97    0135              ENDIF
+98    0135              
+99    0135              IF CLIB_OPT_SCANF & $c00c
+100   0135              	defb	'x'
+101   0135              	defw	__scanf_handle_x
+102   0135              ENDIF
+103   0135              
+104   0135              IF CLIB_OPT_SCANF & $80080
+105   0135              	defb	'p'
+106   0135              	defw	__scanf_handle_x
+107   0135              ENDIF
+108   0135              
+109   0135              IF CLIB_OPT_SCANF & $10010
+110   0135              	defb	'o'
+111   0135              	defw	__scanf_handle_o
+112   0135              ENDIF
+113   0135              
+114   0135              IF CLIB_OPT_SCANF & $100100
+115   0135              	defb	'B'
+116   0135              	defw	__scanf_handle_B
+117   0135              ENDIF
+118   0135              
+119   0135              IF CLIB_OPT_SCANF & $20020
+120   0135              	defb	'n'
+121   0135              	defw	__scanf_handle_n
+122   0135              ENDIF
+123   0135              
+124   0135              IF CLIB_OPT_SCANF & $200
+125   0135              	defb	's'
+126   0135              	defw	__scanf_handle_s
+127   0135              ENDIF
+128   0135              
+129   0135              IF CLIB_OPT_SCANF & $400
+130   0135              	defb	'c'
+131   0135              	defw	__scanf_handle_c
+132   0135              ENDIF
+133   0135              
+134   0135              IF CLIB_OPT_SCANF & $4000000
+135   0135              	defb	'f'
+136   0135              	defw	__scanf_handle_f
+137   0135              ENDIF
+138   0135              
+139   0135              IF CLIB_OPT_SCANF & $1000000
+140   0135              	defb	'e'
+141   0135              	defw	__scanf_handle_f
+142   0135              ENDIF
+143   0135              IF CLIB_OPT_SCANF & $10000000
+144   0135              	defb	'g'
+145   0135              	defw	__scanf_handle_f
+146   0135              ENDIF
+147   0135              
+148   0135              	defb	0	;end marker
+149   0135              ENDIF
+150   0135              
+151   0135              ;
+152   0135              ; printf format picker
+153   0135              ;
+154   0135              
+155   0135              
+156   0135              IF DEFINED_CLIB_OPT_PRINTF
+157   0135              	; User has specified the configuration level - force printf to be included
+158   0135              	UNDEFINE NEED_printf
+159   0135              	DEFINE NEED_printf
+160   0135              ELSE
+161   0135              	IF DEFINED_CRT_printf_format
+162   0135              	    ;Only defined as part of sccz80
+163   0135              	    defc CLIB_OPT_PRINTF = CRT_printf_format
+164   0135                      ELSE
+165   0135              	    ; Default configurations to match old behaviour
+166   0135              	    ; The built in one is roughly the old ministdio
+167   0135              	    IF DEFINED_complexstdio
+168   0135                              defc CLIB_OPT_PRINTF = 0x851BF7BF
+169   0135                          ELSE
+170   0135              	        defc CLIB_OPT_PRINTF = 0x801BF7BF
+171   0135                          ENDIF
+172   0135                      ENDIF
+173   0135              ENDIF
+174   0135              
+175   0135              IF DEFINED_CLIB_OPT_PRINTF_2
+176   0135              	; User has specified the configuration level - force printf to be included
+177   0135              	UNDEFINE NEED_printf
+178   0135              	DEFINE NEED_printf
+179   0135              ENDIF
+180   0135              
+181   0135              IF NEED_printf
+182   0135              	PUBLIC	__printf_format_table
+183   0135              	PUBLIC  __printf_format_table64
+184   0135              	EXTERN	__printf_handle_d
+185   0135              	EXTERN	__printf_handle_u
+186   0135              	EXTERN	__printf_handle_o
+187   0135              	EXTERN	__printf_handle_x
+188   0135              	EXTERN	__printf_handle_X
+189   0135              	EXTERN	__printf_handle_p
+190   0135              	EXTERN	__printf_handle_e
+191   0135              	EXTERN	__printf_handle_f
+192   0135              	EXTERN	__printf_handle_s
+193   0135              	EXTERN	__printf_handle_c
+194   0135              	EXTERN	__printf_handle_n
+195   0135              	EXTERN	__printf_handle_B
+196   0135              	EXTERN	__printf_handle_ll
+197   0135              	EXTERN	__printf_handle_lld
+198   0135              	EXTERN	__printf_handle_llu
+199   0135              	EXTERN	__printf_handle_llo
+200   0135              	EXTERN	__printf_handle_llx
+201   0135              	EXTERN	__printf_handle_llX
+202   0135              	EXTERN	__printf_handle_llB
+203   0135              
+204   0135              __printf_format_table:
+205   0135              
+206   0135              IF CLIB_OPT_PRINTF & $2002
+207   0135              	defb	'u'
+208   0135              	defw	__printf_handle_u
+209   0135              ENDIF
+210   0135              
+211   0135              IF CLIB_OPT_PRINTF & $1001
+212   0135  64          	defb	'd'
+213   0136  00 00       	defw	__printf_handle_d
+214   0138              ENDIF
+215   0138              
+216   0138              IF CLIB_OPT_PRINTF & $4004
+217   0138              	defb	'x'
+218   0138              	defw	__printf_handle_x
+219   0138              ENDIF
+220   0138              
+221   0138              IF CLIB_OPT_PRINTF & $8008
+222   0138              	defb	'X'
+223   0138              	defw	__printf_handle_X
+224   0138              ENDIF
+225   0138              
+226   0138              IF CLIB_OPT_PRINTF & $80080
+227   0138              	defb	'p'
+228   0138              	defw	__printf_handle_x
+229   0138              ENDIF
+230   0138              
+231   0138              IF CLIB_OPT_PRINTF & $100100
+232   0138              	defb	'B'
+233   0138              	defw	__printf_handle_B
+234   0138              ENDIF
+235   0138              
+236   0138              IF CLIB_OPT_PRINTF  & $10010
+237   0138              	defb	'o'
+238   0138              	defw	__printf_handle_o
+239   0138              ENDIF
+240   0138              
+241   0138              IF CLIB_OPT_PRINTF & $20020
+242   0138              	defb	'n'
+243   0138              	defw	__printf_handle_n
+244   0138              ENDIF
+245   0138              
+246   0138              IF CLIB_OPT_PRINTF & $200
+247   0138  73          	defb	's'
+248   0139  00 00       	defw	__printf_handle_s
+249   013B              ENDIF
+250   013B              
+251   013B              IF CLIB_OPT_PRINTF & $400
+252   013B              	defb	'c'
+253   013B              	defw	__printf_handle_c
+254   013B              ENDIF
+255   013B              
+256   013B              IF CLIB_OPT_PRINTF & $4000000
+257   013B              	defb	'f'
+258   013B              	defw	__printf_handle_f
+259   013B              ENDIF
+260   013B              
+261   013B              IF CLIB_OPT_PRINTF  & $1000000
+262   013B              	defb	'e'
+263   013B              	defw	__printf_handle_e
+264   013B              ENDIF
+265   013B              IF CLIB_OPT_PRINTF & $10000000
+266   013B              	defb	'g'
+267   013B              	defw	__printf_handle_f
+268   013B              ENDIF
+269   013B              IF CLIB_OPT_PRINTF_2
+270   013B              	defb	'l'
+271   013B              	defw	__printf_handle_ll
+272   013B              ENDIF
+273   013B  00          	defb	0	;end marker
+274   013C              
+275   013C              __printf_format_table64:
+276   013C              
+277   013C              IF CLIB_OPT_PRINTF_2 & $02
+278   013C              	defb	'u'
+279   013C              	defw	__printf_handle_llu
+280   013C              ENDIF
+281   013C              
+282   013C              IF CLIB_OPT_PRINTF_2 & $01
+283   013C              	defb	'd'
+284   013C              	defw	__printf_handle_lld
+285   013C              ENDIF
+286   013C              
+287   013C              IF CLIB_OPT_PRINTF_2 & $04
+288   013C              	defb	'x'
+289   013C              	defw	__printf_handle_llx
+290   013C              ENDIF
+291   013C              
+292   013C              IF CLIB_OPT_PRINTF_2 & $08
+293   013C              	defb	'X'
+294   013C              	defw	__printf_handle_llX
+295   013C              ENDIF
+296   013C              IF CLIB_OPT_PRINTF_2  & $10
+297   013C              	defb	'o'
+298   013C              	defw	__printf_handle_llo
+299   013C              ENDIF
+300   013C              IF CLIB_OPT_PRINTF_2 & $100
+301   013C              	defb	'B'
+302   013C              	defw	__printf_handle_llB
+303   013C              ENDIF
+304   013C  00          	defb	0	;endmarker
+305   013D              
+306   013D              
+307   013D              
+308   013D              IF CLIB_OPT_PRINTF & $40000000
+309   013D              	EXTERN	__printf_get_flags_impl
+310   013D              	PUBLIC	__printf_get_flags
+311   013D              	defc	__printf_get_flags = __printf_get_flags_impl
+312   013D              ELSE
+313   013D              	EXTERN	__printf_get_flags_noop
+314   013D              	PUBLIC	__printf_get_flags
+315   013D              	defc	__printf_get_flags = __printf_get_flags_noop
+316   013D              ENDIF
+317   013D              
+318   013D              ENDIF
+319   013D              
+320   013D              
+321   013D              ;--------
+322   013D              ; Allow a compile time switch between native output and ANSI terminal
+323   013D              ;
+324   013D              ; -pragma-need=ansiterminal
+325   013D              ;--------
+326   013D              
+327   013D              IF NEED_ansiterminal
+328   013D              	PUBLIC		fputc_cons
+329   013D              	EXTERN		fputc_cons_ansi
+330   013D              	EXTERN		puts_cons_ansi
+331   013D              	defc DEFINED_fputc_cons = 1
+332   013D              	defc DEFINED_puts_cons = 1
+333   013D              	defc fputc_cons = fputc_cons_ansi
+334   013D              
+335   013D              	; Bridge VT100 to gencon
+336   013D                      IF DEFINED_CLIB_ANSITERMINAL_BRIDGE & CLIB_ANSITERMINAL_BRIDGE != 0
+337   013D                          PUBLIC ansi_attr
+338   013D                          PUBLIC ansi_BEL
+339   013D                          PUBLIC ansi_cls
+340   013D                          PUBLIC ansi_CHAR
+341   013D                          PUBLIC ansi_del_line
+342   013D                          PUBLIC ansi_SCROLLUP
+343   013D                          EXTERN __gencon_ansi_attr
+344   013D                          EXTERN __gencon_ansi_BEL
+345   013D                          EXTERN __gencon_ansi_cls
+346   013D                          EXTERN __gencon_ansi_CHAR
+347   013D                          EXTERN __gencon_ansi_del_line
+348   013D                          EXTERN __gencon_ansi_SCROLLUP
+349   013D                          defc ansi_attr = __gencon_ansi_attr
+350   013D                          defc ansi_BEL = __gencon_ansi_BEL
+351   013D                          defc ansi_cls = __gencon_ansi_cls
+352   013D                          defc ansi_CHAR = __gencon_ansi_CHAR
+353   013D                          defc ansi_del_line = __gencon_ansi_del_line
+354   013D                          defc ansi_SCROLLUP = __gencon_ansi_SCROLLUP
+355   013D              
+356   013D                          ; We're using gencon, don't include an ANSIfont
+357   013D                          UNDEFINE TAR__no_ansifont
+358   013D                          defc TAR__no_ansifont = 1
+359   013D              	    IF !DEFINED_ansicolumns
+360   013D                              defc ansicolumns = CONSOLE_COLUMNS
+361   013D                              defc DEFINED_ansicolumns = 1
+362   013D                          ENDIF
+363   013D                      ENDIF
+364   013D              
+365   013D                     	PUBLIC ansicolumns
+366   013D              
+367   013D              	IF !TAR__no_ansifont
+368   013D                      	PUBLIC ansicharacter_pixelwidth
+369   013D              		PUBLIC ansifont
+370   013D                      	PUBLIC ansifont_is_packed
+371   013D                      ELSE
+372   013D                              defc DEFINED_ansifont = 1
+373   013D              	ENDIF
+374   013D              
+375   013D              	IF !ansipixels
+376   013D              		defc ansipixels = 256
+377   013D              	ENDIF
+378   013D              
+379   013D              	IF !DEFINED_ansicolumns
+380   013D              		 defc ansicolumns = 64
+381   013D              	ENDIF
+382   013D              
+383   013D              	UNDEFINE CONSOLE_COLUMNS
+384   013D              	defc CONSOLE_COLUMNS = ansicolumns
+385   013D              
+386   013D              	IF DEFINED_ansirows
+387   013D              		UNDEFINE CONSOLE_ROWS
+388   013D              		defc CONSOLE_ROWS = ansirows
+389   013D              	ENDIF
+390   013D              
+391   013D              
+392   013D              	IF (ansicolumns = (ansipixels/2))
+393   013D              	    defc ansicharacter_pixelwidth = 2
+394   013D                          IF !DEFINED_ansifont
+395   013D                          	EXTERN ansifont_f4pack
+396   013D              	    	defc ansifont = ansifont_f4pack
+397   013D                          	defc ansifont_is_packed = 1
+398   013D                          ENDIF
+399   013D              	ENDIF
+400   013D              	IF (ansicolumns = (ansipixels/3))
+401   013D              	    defc ansicharacter_pixelwidth = 3
+402   013D                          IF !DEFINED_ansifont
+403   013D                              EXTERN ansifont_f4pack
+404   013D              	        defc ansifont = ansifont_f4pack
+405   013D                              defc ansifont_is_packed = 1
+406   013D              	    ENDIF
+407   013D              	ENDIF
+408   013D              	IF (ansicolumns = (ansipixels/4))
+409   013D              	    defc ansicharacter_pixelwidth = 4
+410   013D                          IF !DEFINED_ansifont
+411   013D                              EXTERN ansifont_f4pack
+412   013D              	        defc ansifont = ansifont_f4pack
+413   013D                              defc ansifont_is_packed = 1
+414   013D              	    ENDIF
+415   013D              	ENDIF
+416   013D              	IF (ansicolumns = (ansipixels/5))
+417   013D              	    defc ansicharacter_pixelwidth = 5
+418   013D                          IF !DEFINED_ansifont
+419   013D                              EXTERN ansifont_f5
+420   013D              	        defc ansifont = ansifont_f5
+421   013D                              defc ansifont_is_packed = 0
+422   013D              	    ENDIF
+423   013D              	ENDIF
+424   013D              	IF (ansicolumns = (ansipixels/6))
+425   013D              	    defc ansicharacter_pixelwidth = 6
+426   013D                          IF !DEFINED_ansifont
+427   013D                              EXTERN ansifont_f6
+428   013D              	        defc ansifont = ansifont_f6
+429   013D                              defc ansifont_is_packed = 0
+430   013D              	    ENDIF
+431   013D              	ENDIF
+432   013D              	IF (ansicolumns = (ansipixels/7))
+433   013D              	    defc ansicharacter_pixelwidth = 7
+434   013D                          IF !DEFINED_ansifont
+435   013D                              EXTERN ansifont_f8
+436   013D              	        defc ansifont = ansifont_f8
+437   013D                              defc ansifont_is_packed = 0
+438   013D              	    ENDIF
+439   013D              	ENDIF
+440   013D              	IF (ansicolumns = (ansipixels/8))
+441   013D              	    defc ansicharacter_pixelwidth = 8
+442   013D                          IF !DEFINED_ansifont
+443   013D                              EXTERN ansifont_f8
+444   013D              	        defc ansifont = ansifont_f8
+445   013D                              defc ansifont_is_packed = 0
+446   013D              	    ENDIF
+447   013D              	ENDIF
+448   013D              	IF (ansicolumns = (ansipixels/9))
+449   013D              	    defc ansicharacter_pixelwidth = 9
+450   013D                          IF !DEFINED_ansifont
+451   013D                              EXTERN ansifont_f8
+452   013D              	        defc ansifont = ansifont_f8
+453   013D                              defc ansifont_is_packed = 0
+454   013D              	    ENDIF
+455   013D              	ENDIF
+456   013D              
+457   013D              	IF (ansipixels = 512)
+458   013D              		IF (ansicolumns = 48)
+459   013D              			defc ansicharacter_pixelwidth = 9
+460   013D              			IF !DEFINED_ansifont
+461   013D              				EXTERN ansifont_f8
+462   013D              				defc ansifont = ansifont_f8
+463   013D              				defc ansifont_is_packed = 0
+464   013D              			ENDIF
+465   013D              		ENDIF
+466   013D              		IF (ansicolumns = 80)
+467   013D              			defc ansicharacter_pixelwidth = 6
+468   013D              			IF !DEFINED_ansifont
+469   013D              				EXTERN ansifont_f6
+470   013D              				defc ansifont = ansifont_f6
+471   013D              				defc ansifont_is_packed = 0
+472   013D              			ENDIF
+473   013D              		ENDIF
+474   013D              		IF (ansicolumns = 160)
+475   013D              			defc ansicharacter_pixelwidth = 3
+476   013D              			IF !DEFINED_ansifont
+477   013D              				EXTERN ansifont_f4pack
+478   013D              				defc ansifont = ansifont_f4pack
+479   013D              				defc ansifont_is_packed = 1
+480   013D              			ENDIF
+481   013D              		ENDIF
+482   013D              	ENDIF
+483   013D              
+484   013D              	IF (ansipixels = 256)
+485   013D              		IF (ansicolumns = 24)
+486   013D              			defc ansicharacter_pixelwidth = 9
+487   013D              			IF !DEFINED_ansifont
+488   013D              				EXTERN ansifont_f8
+489   013D              				defc ansifont = ansifont_f8
+490   013D              				defc ansifont_is_packed = 0
+491   013D              			ENDIF
+492   013D              		ENDIF
+493   013D              		IF (ansicolumns = 40)
+494   013D              			defc ansicharacter_pixelwidth = 6
+495   013D              			IF !DEFINED_ansifont
+496   013D              				EXTERN ansifont_f6
+497   013D              				defc ansifont = ansifont_f6
+498   013D              				defc ansifont_is_packed = 0
+499   013D              			ENDIF
+500   013D              		ENDIF
+501   013D              		IF (ansicolumns = 80)
+502   013D              			defc ansicharacter_pixelwidth = 3
+503   013D              			IF !DEFINED_ansifont
+504   013D              				EXTERN ansifont_f4pack
+505   013D              				defc ansifont = ansifont_f4pack
+506   013D              				defc ansifont_is_packed = 1
+507   013D              			ENDIF
+508   013D              		ENDIF
+509   013D              	ENDIF
+510   013D              
+511   013D              ENDIF
+512   013D              
+513   013D              ; If it's not been overridden by anybody, lets use the native output
+514   013D              IF !DEFINED_fputc_cons
+515   013D              	PUBLIC		fputc_cons
+516   013D              	defc DEFINED_fputc_cons = 1
+517   013D                      IF !TAR__fputc_cons_generic
+518   013D              	     EXTERN	fputc_cons_native
+519   013D                	     defc fputc_cons = fputc_cons_native
+520   013D                      ELSE
+521   013D              	     EXTERN	fputc_cons_generic
+522   013D                	     defc fputc_cons = fputc_cons_generic
+523   013D                      ENDIF
+524   013D              ENDIF
+525   013D              
+526   013D              IF DEFINED_fputc_cons
+527   013D              	PUBLIC		_fputc_cons
+528   013D              	defc		_fputc_cons = fputc_cons
+529   013D              
+530   013D              ENDIF
+531   013D              
+532   013D              IF !DEFINED_getk
+533   013D                 IF !DEFINED_fgetc_cons
+534   013D                    IF TAR__fgetc_cons_inkey
+535   013D                        EXTERN fgetc_cons_inkey
+536   013D                        EXTERN getk_inkey
+537   013D                        PUBLIC fgetc_cons
+538   013D                        PUBLIC _fgetc_cons
+539   013D                        PUBLIC getk
+540   013D                        PUBLIC _getk
+541   013D                        defc fgetc_cons = fgetc_cons_inkey
+542   013D                        defc _fgetc_cons = fgetc_cons_inkey
+543   013D                        defc getk = getk_inkey
+544   013D                        defc _getk = getk_inkey
+545   013D                    ENDIF
+546   013D                 ENDIF
+547   013D              ENDIF
+548   013D              
+549   013D              IF DEFINED_fgetc_cons
+550   013D                IF !DEFINED__fgetc_cons
+551   013D                    PUBLIC _fgetc_cons
+552   013D                    defc _fgetc_cons = fgetc_cons
+553   013D                ENDIF
+554   013D              ENDIF
+555   013D              
+556   013D              IF DEFINED_getk
+557   013D                IF !DEFINED__getk
+558   013D                    PUBLIC _getk
+559   013D                    defc _getk = getk
+560   013D                ENDIF
+561   013D              ENDIF
+562   013D              
+563   013D              
+564   013D              ;TODO: These need to go into rules
+565   013D              IF CONSOLE_COLUMNS
+566   013D              	PUBLIC CONSOLE_COLUMNS
+567   013D              ENDIF
+568   013D              IF CONSOLE_ROWS
+569   013D              	PUBLIC CONSOLE_ROWS
+570   013D              ENDIF
+571   013D              
+572   013D              IF !CONSOLE_XOFFSET
+573   013D                  defc CONSOLE_XOFFSET = 0
+574   013D              ENDIF
+575   013D              PUBLIC CONSOLE_XOFFSET
+576   013D              IF !CONSOLE_YOFFSET
+577   013D                  defc CONSOLE_YOFFSET = 0
+578   013D              ENDIF
+579   013D              PUBLIC CONSOLE_YOFFSET
+580   013D              
+581   013D              IF !CLIB_KBHIT_NOSTORE
+582   013D                  defc CLIB_KBHIT_NOSTORE = 0
+583   013D              ENDIF
+584   013D              PUBLIC CLIB_KBHIT_NOSTORE
+585   013D              
+586   013D              
+587   013D              
+241   013D                  INCLUDE	"crt/classic/crt_section.asm"
+1     013D              ; Memory map and section setup
+2     013D              ;
+3     013D              ; Contains the generic variables + features
+4     013D              
+5     013D              ;
+6     013D              ; crt_model = 0		; everything in RAM
+7     013D              ; crt_model = 1		; ROM model, data section copied
+8     013D              ; crt_model = 2		; ROM model, data section compressed with zx7
+9     013D              ; crt_model = 3		; ROM model, data section compressed with zx0
+10    013D              
+11    013D              ; Include the default memory map. You can override this
+12    013D              
+13    013D              IF __MMAP == -1
+14    013D                  ; The user has supplied a memory map.
+15    013D                  INCLUDE	"./mmap.inc"
+16    013D              ELSE
+17    013D                  ; Include the standard memory map
+18    013D                  INCLUDE	"crt/classic/crt_section_standard.asm"
+1     013D              ; Classic Memory map and section setup
+2     013D              ;
+3     013D              ; This layout suits all the classic machines. Memory placement is
+4     013D              ; affected by:
+5     013D              ;
+6     013D              ; CRT_MODEL: RAM/ROM configuration
+7     013D              ; CRT_ORG_CODE: Where code starts executing from
+8     013D              ; CRT_ORG_BSS:  Where uninitialised global variables are placed
+9     013D              ; CRT_ORG_GRAPHICS: Where graphics routines + variables are stored (certain ports only)
+10    013D              
+11    013D              ;
+12    013D              ; Contains the generic variables + features
+13    013D              
+14    013D              ;
+15    013D              ; crt_model = 0		; everything in RAM
+16    013D              ; crt_model = 1		; ROM model, data section copied
+17    013D              ; crt_model = 2		; ROM model, data section compressed (zx7)
+18    013D              ; crt_model = 3		; ROM model, data section compressed (zx0)
+19    013D              
+20    013D              
+21    013D              
+22    013D                  INCLUDE "crt/classic/crt_section_code.inc"
+1     013D              ; CODE sections defined by the classic library
+2     013D              
+3     013D                  SECTION CODE
 4     0000                  SECTION code_crt_init
 5     0000                  SECTION code_crt_init_exit
 6     0000                  SECTION code_crt_exit
@@ -1510,35 +1661,35 @@
 65    001F                  ld      a,h
 66    001F                  ld      (_heap+1),a
 67    001F                ELSE
-68    001F                  ld      hl,__BSS_END_tail
-69    001F                  ld      (_heap),hl
-70    001F                ENDIF
-71    001F              ENDIF
-72    001F              IF ( __crt_model = 1 )
-73    001F                  ; Just copy the DATA section
-74    001F                  EXTERN	__ROMABLE_END_tail
-75    001F                  EXTERN	__DATA_head
-76    001F                  EXTERN	__DATA_END_tail
-77    001F                  ld	hl,__ROMABLE_END_tail
-78    001F                  ld	de,__DATA_head
-79    001F                  ld	bc,__DATA_END_tail - __DATA_head
-80    001F                  EXTERN  asm_memcpy
-81    001F                  call    asm_memcpy
-82    001F              ELIF ( __crt_model >= 2 )
-83    001F                  EXTERN	__ROMABLE_END_tail
-84    001F                  EXTERN	__DATA_head
-85    001F                  ld      hl,__ROMABLE_END_tail
-86    001F                  ld      de,__DATA_head
-87    001F                IF ( __crt_model = 2)
-88    001F                  EXTERN  asm_dzx7_standard
-89    001F                  call    asm_dzx7_standard
-90    001F                ELIF ( __crt_model = 3)
-91    001F                  EXTERN  asm_dzx0_standard
-92    001F                  call    asm_dzx0_standard
-93    001F                ENDIF
-94    001F              ENDIF
-95    001F              
-96    001F                  SECTION code_crt_init_exit
+68    001F  21 00 00        ld      hl,__BSS_END_tail
+69    0022  22 69 00        ld      (_heap),hl
+70    0025                ENDIF
+71    0025              ENDIF
+72    0025              IF ( __crt_model = 1 )
+73    0025                  ; Just copy the DATA section
+74    0025                  EXTERN	__ROMABLE_END_tail
+75    0025                  EXTERN	__DATA_head
+76    0025                  EXTERN	__DATA_END_tail
+77    0025                  ld	hl,__ROMABLE_END_tail
+78    0025                  ld	de,__DATA_head
+79    0025                  ld	bc,__DATA_END_tail - __DATA_head
+80    0025                  EXTERN  asm_memcpy
+81    0025                  call    asm_memcpy
+82    0025              ELIF ( __crt_model >= 2 )
+83    0025                  EXTERN	__ROMABLE_END_tail
+84    0025                  EXTERN	__DATA_head
+85    0025                  ld      hl,__ROMABLE_END_tail
+86    0025                  ld      de,__DATA_head
+87    0025                IF ( __crt_model = 2)
+88    0025                  EXTERN  asm_dzx7_standard
+89    0025                  call    asm_dzx7_standard
+90    0025                ELIF ( __crt_model = 3)
+91    0025                  EXTERN  asm_dzx0_standard
+92    0025                  call    asm_dzx0_standard
+93    0025                ENDIF
+94    0025              ENDIF
+95    0025              
+96    0025                  SECTION code_crt_init_exit
 97    0000  C9              ret
 98    0001                  SECTION code_crt_exit
 99    0000              crt0_exit:
@@ -1575,63 +1726,63 @@
 126   0069                  ; but first its value (based on __tail)
 127   0069                  ; will be kept for sbrk() to setup the malloc area
 128   0069              _heap:
-129   0069                  defw 0          ; Initialised by code_crt_init - location of the last program byte
-130   0069                  defw 0
-131   0069              ENDIF
-132   0069              
-133   0069              IF CLIB_BALLOC_TABLE_SIZE > 0
-134   0069              
-135   0069                 ; create balloc table
-136   0069                 SECTION data_alloc_balloc
-137   0069                 PUBLIC __balloc_array
-138   0069                 __balloc_array:             defw __balloc_table
-139   0069              
-140   0069                 SECTION bss_alloc_balloc
-141   0069                 PUBLIC __balloc_table
-142   0069                 __balloc_table:             defs CLIB_BALLOC_TABLE_SIZE * 2
-143   0069              
-144   0069              ENDIF
-145   0069              
-242   0069                  INCLUDE "crt/classic/crt_cpm_fcntl.asm"
-1     0069              ; CP/M style FCB support (CP/M + MSXDOS1)
-2     0069              
-3     0069              
-4     0069              
-5     0069              
-6     0069              
-7     0069                  SECTION bss_crt
-8     0069              
-9     0069              IF CLIB_OPEN_MAX > 0
-10    0069                  SECTION bss_crt
-11    0069                  PUBLIC  __fcb
-12    0069              __fcb:
-13    0069  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0089  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      00A9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      00C9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      00E9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0109  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0129  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0149  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0169  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0189  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      01A9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      01C9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      01E9  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0209  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0229  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
-      0249  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+129   0069  00 00           defw 0          ; Initialised by code_crt_init - location of the last program byte
+130   006B  00 00           defw 0
+131   006D              ENDIF
+132   006D              
+133   006D              IF CLIB_BALLOC_TABLE_SIZE > 0
+134   006D              
+135   006D                 ; create balloc table
+136   006D                 SECTION data_alloc_balloc
+137   006D                 PUBLIC __balloc_array
+138   006D                 __balloc_array:             defw __balloc_table
+139   006D              
+140   006D                 SECTION bss_alloc_balloc
+141   006D                 PUBLIC __balloc_table
+142   006D                 __balloc_table:             defs CLIB_BALLOC_TABLE_SIZE * 2
+143   006D              
+144   006D              ENDIF
+145   006D              
+242   006D                  INCLUDE "crt/classic/crt_cpm_fcntl.asm"
+1     006D              ; CP/M style FCB support (CP/M + MSXDOS1)
+2     006D              
+3     006D              
+4     006D              
+5     006D              
+6     006D              
+7     006D                  SECTION bss_crt
+8     006D              
+9     006D              IF CLIB_OPEN_MAX > 0
+10    006D                  SECTION bss_crt
+11    006D                  PUBLIC  __fcb
+12    006D              __fcb:
+13    006D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      008D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      00AD  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      00CD  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      00ED  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      010D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      012D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      014D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      016D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      018D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      01AD  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      01CD  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      01ED  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      020D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      022D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+      024D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
                             defs    CLIB_OPEN_MAX * 166	; Each FCB is 43 bytes long
-14    025B              ENDIF
-15    025B              
-16    025B                  PUBLIC  defltdsk
-17    025B  00          defltdsk:       defb    0	;Default disc
-18    025C              
-243   025C              
-244   025C                  SECTION code_crt_init
-245   001F  0E 19           ld      c,25
-246   0021  CD 05 00        call    5
-247   0024  32 5B 02        ld      (defltdsk),a
-248   0027              
-249   0027              
-250   0027              
+14    025F              ENDIF
+15    025F              
+16    025F                  PUBLIC  defltdsk
+17    025F  00          defltdsk:       defb    0	;Default disc
+18    0260              
+243   0260              
+244   0260                  SECTION code_crt_init
+245   0025  0E 19           ld      c,25
+246   0027  CD 05 00        call    5
+247   002A  32 5F 02        ld      (defltdsk),a
+248   002D              
+249   002D              
+250   002D              

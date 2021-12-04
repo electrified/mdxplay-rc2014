@@ -6,7 +6,7 @@
 3     0000              ;
 4     0000              ;	Reconstructed for z80 Module Assembler
 5     0000              ;
-6     0000              ;	Module compile time: Wed Dec  1 17:43:35 2021
+6     0000              ;	Module compile time: Sat Dec  4 13:11:10 2021
 7     0000              
 8     0000              
 9     0000              	C_LINE	0,"compat.c"
@@ -473,38 +473,104 @@
 52    0000              	C_LINE	54,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
 54    0000              	C_LINE	55,"/home/ed/dev/3rdparty/z88dk/lib/config/../..//include/stdint.h"
 55    0000              	C_LINE	3,"compat.h"
-3     0000              	C_LINE	4,"compat.h"
-4     0000              	C_LINE	5,"compat.h"
-5     0000              	C_LINE	1,"compat.c"
+3     0000              	C_LINE	5,"compat.h"
+5     0000              	C_LINE	6,"compat.h"
+6     0000              	C_LINE	7,"compat.h"
+7     0000              	C_LINE	8,"compat.h"
+8     0000              	C_LINE	1,"compat.c"
 1     0000              	C_LINE	3,"compat.c"
-3     0000              	SECTION	code_compiler
-3     0000              
-3     0000              ; Function delayMicroseconds flags 0x00000200 __smallc
-3     0000              ; void delayMicroseconds(unsigned int delay)
-3     0000              ; parameter 'unsigned int delay' at sp+2 size(2)
-3     0000              	C_LINE	3,"compat.c::delayMicroseconds::0::0"
-3     0000              ._delayMicroseconds
-3     0000  C9          	ret
-3     0001              
-3     0001              
-3     0001              	C_LINE	7,"compat.c::delayMicroseconds::0::1"
-7     0001              ; --- Start of Optimiser additions ---
-7     0001              
-7     0001              
-7     0001              ; --- Start of Static Variables ---
-7     0001              
-7     0001              	SECTION	bss_compiler
-7     0000              	SECTION	code_compiler
-7     0001              
-7     0001              
-7     0001              ; --- Start of Scope Defns ---
-7     0001              
-7     0001              	GLOBAL	_delayMicroseconds
-7     0001              	GLOBAL	_micros
-7     0001              
-7     0001              
-7     0001              ; --- End of Scope Defns ---
-7     0001              
-7     0001              
-7     0001              ; --- End of Compilation ---
-7     0001              
+3     0000              	C_LINE	5,"compat.c"
+5     0000              	SECTION	code_compiler
+5     0000              
+5     0000              ; Function micros flags 0x00000200 __smallc
+5     0000              ; unsigned long uint32_tmicros()
+5     0000              	C_LINE	5,"compat.c::micros::0::0"
+5     0000              ._micros
+5     0000  21 00 00    	ld	hl,0	;const
+5     0003  54          	ld	d,h
+5     0004  5D          	ld	e,l
+5     0005  C9          	ret
+5     0006              
+5     0006              
+5     0006              	C_LINE	9,"compat.c::micros::0::1"
+9     0006              
+9     0006              ; Function random flags 0x00000200 __smallc
+9     0006              ; unsigned char uint8_trandom(unsigned char x)
+9     0006              ; parameter 'unsigned char x' at sp+2 size(1)
+9     0006              	C_LINE	9,"compat.c::random::0::1"
+9     0006              ._random
+9     0006  21 00 00    	ld	hl,0	;const
+9     0009  C9          	ret
+9     000A              
+9     000A              
+9     000A              	C_LINE	13,"compat.c::random::0::2"
+13    000A              
+13    000A              ; Function pgm_read_byte_near flags 0x00000200 __smallc
+13    000A              ; unsigned char uint8_tpgm_read_byte_near(unsigned int addr)
+13    000A              ; parameter 'unsigned int addr' at sp+2 size(2)
+13    000A              	C_LINE	13,"compat.c::pgm_read_byte_near::0::2"
+13    000A              ._pgm_read_byte_near
+13    000A  ED 5B 00 00 	ld	de,(_buffer)
+13    000E  C1          	pop	bc
+13    000F  E1          	pop	hl
+13    0010  E5          	push	hl
+13    0011  C5          	push	bc
+13    0012  19          	add	hl,de
+13    0013  6E          	ld	l,(hl)
+13    0014  26 00       	ld	h,0
+13    0016  C9          	ret
+13    0017              
+13    0017              
+13    0017              	C_LINE	17,"compat.c::pgm_read_byte_near::0::3"
+17    0017              
+17    0017              ; Function pgm_read_word_near flags 0x00000200 __smallc
+17    0017              ; unsigned int uint16_tpgm_read_word_near(unsigned int addr)
+17    0017              ; parameter 'unsigned int addr' at sp+2 size(2)
+17    0017              	C_LINE	17,"compat.c::pgm_read_word_near::0::3"
+17    0017              ._pgm_read_word_near
+17    0017  2A 00 00    	ld	hl,(_buffer)
+17    001A  E5          	push	hl
+17    001B  21 04 00    	ld	hl,4	;const
+17    001E  39          	add	hl,sp
+17    001F  CD 00 00    	call	l_gint	;
+17    0022  23          	inc	hl
+17    0023  D1          	pop	de
+17    0024  19          	add	hl,de
+17    0025  CD 00 00    	call	l_gchar
+17    0028  65          	ld	h,l
+17    0029  2E 00       	ld	l,0
+17    002B  E5          	push	hl
+17    002C  ED 5B 00 00 	ld	de,(_buffer)
+17    0030  21 04 00    	ld	hl,4	;const
+17    0033  39          	add	hl,sp
+17    0034  CD 00 00    	call	l_gint	;
+17    0037  19          	add	hl,de
+17    0038  CD 00 00    	call	l_gchar
+17    003B  D1          	pop	de
+17    003C  CD 00 00    	call	l_or
+17    003F  C9          	ret
+17    0040              
+17    0040              
+17    0040              ; --- Start of Optimiser additions ---
+17    0040              
+17    0040              
+17    0040              ; --- Start of Static Variables ---
+17    0040              
+17    0040              	SECTION	bss_compiler
+17    0000              	SECTION	code_compiler
+17    0040              
+17    0040              
+17    0040              ; --- Start of Scope Defns ---
+17    0040              
+17    0040              	GLOBAL	_micros
+17    0040              	GLOBAL	_random
+17    0040              	GLOBAL	_pgm_read_word_near
+17    0040              	GLOBAL	_pgm_read_byte_near
+17    0040              	GLOBAL	_buffer
+17    0040              
+17    0040              
+17    0040              ; --- End of Scope Defns ---
+17    0040              
+17    0040              
+17    0040              ; --- End of Compilation ---
+17    0040              
