@@ -52,25 +52,25 @@ void loop()
 {
     waittime = MDXParser_ClockToMilliSec(&mdx, 1);
     //   waittime -= proctime;
-    while (waittime > 0)
-    {
-        if (waittime > 16)
-        {
-            // __SCCZ80
-            #ifdef __SDCC
-            msleep(16);
-            #endif
+    // while (waittime > 0)
+    // {
+    //     if (waittime > 16)
+    //     {
+    //         // __SCCZ80
+    //         #ifdef __SDCC
+    //         msleep(16);
+    //         #endif
 
-            waittime -= 16;
-        }
-        else
-        {
-            #ifdef __SDCC
-            msleep(waittime);
-            #endif
-            waittime = 0;
-        }
-    }
+    //         waittime -= 16;
+    //     }
+    //     else
+    //     {
+    //         #ifdef __SDCC
+    //         msleep(waittime);
+    //         #endif
+    //         waittime = 0;
+    //     }
+    // }
     //   proctime = micros();
     MDXParser_Elapse(&mdx, 1);
     //   proctime = micros() - proctime;
@@ -80,7 +80,7 @@ void readfileintoram(char *filename, char **buffer)
 {
     printf("Beginning file load\n");
     FILE *pFile;
-    long lSize;
+    uint16_t lSize;
     size_t result;
 
     pFile = fopen(filename, "rb");
@@ -99,6 +99,9 @@ void readfileintoram(char *filename, char **buffer)
     // allocate memory to contain the whole file:
     // add one more byte for the NULL character to
     // terminate the memory string
+    if(lSize == 0) {
+        lSize = 16000;
+    }
 
     char *newBuffer = (char *)malloc(sizeof(char) * lSize + 1);
     if (newBuffer == NULL)
@@ -124,21 +127,6 @@ void readfileintoram(char *filename, char **buffer)
         return;
         // exit(3); // we use different exit codes for different errrors, that's why.
     }
-
-    // the whole file is now loaded in the memory buffer. Is it correct?
-    //
-    // look at the file using the cat myfile.txt. Problem is you
-    // can't see hidden whitespace characters like newline or NULL.
-    // try, od -t c myfile.txt. Now you can see the complete
-    // file. What is at the end of the file? Probably a \n (newline).
-
-    // Why not run gdb and look at the buffer contents.
-    // Looks good. OK.
-    // Let's print it out
-
-    // fputs(buffer, stdout);
-
-    // terminate
 
     fclose(pFile);
     // free(buffer);

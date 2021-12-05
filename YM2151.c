@@ -11,14 +11,14 @@
 #define REG_SEL_PORT 0xFEu
 #define REG_DATA_PORT 0xFFu
 
-#ifdef __SDCC
+// #ifdef __SDCC
 __sfr __at REG_SEL_PORT REG_SEL;
 __sfr __at REG_DATA_PORT REG_DATA;
-#else
+// #else
 
-unsigned char REG_SEL;
-unsigned char REG_DATA;
-#endif
+// unsigned char REG_SEL;
+// unsigned char REG_DATA;
+// #endif
 
 struct YM2151 ym2151;
 
@@ -38,10 +38,22 @@ static uint8_t last_write_addr = 0x00;
  */
 void YM2151_write(uint8_t addr, uint8_t data)
 {
+    uint8_t i;
+    // addr 0x20へのアクセスの後busyフラグが落ちなくなる病 '86の石だと発生
+    // 他のレジスタに書くまで落ちないので、強引だが0x20アクセス後ならチェックしない
     if (last_write_addr != 0x20)
     {
-    }
+        for(i=0;i<32;i++){
 
+			if(YM2151_read() & 0x80 == 0){	// Read Status
+				break;
+			}
+			if(i>16){
+				YM2151_wait(1);
+			}
+		}
+    }
+    // printf("ym write: %d %d", addr, data); 
     REG_SEL = addr;
     REG_DATA = data;
     last_write_addr = addr;
@@ -62,12 +74,12 @@ void YM2151_wait(uint8_t loop)
     uint8_t wi;
     for (wi = 0; wi < loop; wi++)
     {
-// 16MHz  nop = @60nSec
-asm("nop");
-asm("nop");
-asm("nop");
-asm("nop");
-asm("nop");
+        // 16MHz  nop = @60nSec
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
     }
 }
 

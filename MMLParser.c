@@ -3,6 +3,7 @@
 #include "MDXParser.h"
 #include "compat.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 const uint8_t MMLParser_RepeatCnt = 4;
 
@@ -668,4 +669,6 @@ uint16_t MDXParser_ReadData16(struct MDXParser *mdxParser, uint16_t addr)
 {
     uint16_t rdata = pgm_read_word_near(mdxParser->DataBP + (addr));
     return (rdata << 8) | (rdata >> 8);
+    // printf("result 0x%04X\n", rdata);
+    // return rdata; 
 }

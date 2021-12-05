@@ -3,12 +3,8 @@
 
 extern char *buffer;
 
-uint32_t micros() {
-    return 0;
-}
-
 uint8_t pgm_read_byte_near(uint16_t addr) {
-    printf("reading address %d\n", addr);
+    // printf("reading address %d\n", addr);
     return *(buffer + addr);
 }
 
