@@ -2,6 +2,7 @@
 	SketchMDXPlayer	v0.31
 	author:ISH
 */
+#pragma output noprotectmsdos
 #include "main.h"
 #include "YM2151.h"
 #include "MMLParser.h"
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct MDXParser mdx;
+struct MDXParser mdxParser;
 
 int32_t waittime = 0;
 uint32_t proctime = 0;
@@ -38,8 +39,8 @@ int main(int argc, char **argv)
 
     printf("BUffer 2 %d\n", buffer);
 
-    MDXParser_Setup(&mdx, 0);
-    MDXParser_Elapse(&mdx, 0);
+    MDXParser_Setup(0);
+    MDXParser_Elapse(0);
 
     while (1)
     {
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
 
 void loop()
 {
-    waittime = MDXParser_ClockToMilliSec(&mdx, 1);
+    // waittime = MDXParser_ClockToMilliSec(1);
     //   waittime -= proctime;
     // while (waittime > 0)
     // {
@@ -72,7 +73,7 @@ void loop()
     //     }
     // }
     //   proctime = micros();
-    MDXParser_Elapse(&mdx, 1);
+    MDXParser_Elapse(1);
     //   proctime = micros() - proctime;
 }
 

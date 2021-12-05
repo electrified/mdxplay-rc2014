@@ -1,11 +1,12 @@
 #include "Common.h"
 #include "MMLParser.h"
 #include "MDXParser.h"
-#include "compat.h"
 #include <stdlib.h>
 #include <stdio.h>
 
 const uint8_t MMLParser_RepeatCnt = 4;
+
+extern struct MDXParser mdxParser;
 
 // ※クロックの１単位は全音符／１９２
 // typedef	void (MMLParser_ *CommandFunc)();
@@ -65,7 +66,7 @@ void MMLParser_Init(struct MMLParser *mmlParser, uint8_t ch, uint16_t base, uint
 }
 void MMLParser_Elapse(struct MMLParser *mmlParser)
 {
-    uint8_t command = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t command = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (command < 0x80)
     { // 休符
         // [$00 ～ $7F] 長さはデータ値+1クロック
@@ -77,7 +78,7 @@ void MMLParser_Elapse(struct MMLParser *mmlParser)
     if (command < 0xe0)
     { // 音符
         mmlParser->Note = command - 0x80;
-        uint8_t keytime = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+        uint8_t keytime = MDXParser_ReadData8(mmlParser->CurrentAddr++);
         // [$80 ～ $DF] + [クロック - 1]  音程は$80がo0d+ $DFがo8d  PCMﾊﾟｰﾄではﾃﾞｰﾀ番号
         mmlParser->Clock = keytime + 1;
         mmlParser->KeyOffClock = (uint8_t)(mmlParser->KeyOnDelay + (((uint16_t)mmlParser->Clock * (uint16_t)mmlParser->KeyLength) >> 6)); //
@@ -268,8 +269,8 @@ void MMLParser_C_xx_Unknown(struct MMLParser *mmlParser)
 //    [$E7] + [$01] + [SPEED]       $FOコマンド対応
 void MMLParser_C_e7_Fadeout(struct MMLParser *mmlParser)
 {
-    MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
-    MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    MDXParser_ReadData8(mmlParser->CurrentAddr++);
 }
 //・PCM8拡張モード移行
 //    [$E8]                         Achの頭で有効
@@ -280,7 +281,7 @@ void MMLParser_C_e8_PCM8Ext(struct MMLParser *mmlParser)
 //    [$E9] + [???]                 MDコマンド対応
 void MMLParser_C_e9_LFODelay(struct MMLParser *mmlParser)
 {
-    MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    MDXParser_ReadData8(mmlParser->CurrentAddr++);
 }
 //・OPMLFO制御
 //    [$EA] + [$80]                 MHOF
@@ -288,7 +289,7 @@ void MMLParser_C_e9_LFODelay(struct MMLParser *mmlParser)
 //    [$EA] + [SYNC/WAVE] + [LFRQ] + [PMD] + [AMD] + [PMS/AMS]
 void MMLParser_C_ea_LFOCtrl(struct MMLParser *mmlParser)
 {
-    uint8_t lfocom = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t lfocom = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (lfocom & 0x80)
     {
         if (lfocom & 0x01)
@@ -303,13 +304,13 @@ void MMLParser_C_ea_LFOCtrl(struct MMLParser *mmlParser)
     }
     YM2151_write(0x1b, lfocom);
 
-    uint8_t lfrq = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t lfrq = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(0x18, lfrq);
-    uint8_t pmd = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t pmd = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(0x19, pmd);
-    uint8_t amd = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t amd = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(0x19, amd);
-    uint8_t RegPMSAMS = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t RegPMSAMS = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(0x38 + mmlParser->Channel, RegPMSAMS);
 }
 //・音量LFO制御
@@ -318,7 +319,7 @@ void MMLParser_C_ea_LFOCtrl(struct MMLParser *mmlParser)
 //    [$EB] + [WAVE※1] + [周期※2].w + [変移※4].w
 void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
 {
-    uint8_t lfocom = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t lfocom = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (lfocom & 0x80)
     {
         if (lfocom & 0x01)
@@ -334,9 +335,9 @@ void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
     }
     int16_t DeltaFixd;
     mmlParser->VLFO.Type = lfocom + 1;
-    mmlParser->VLFO.Length = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    mmlParser->VLFO.Length = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
-    DeltaFixd = mmlParser->VLFO.DeltaStart = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    DeltaFixd = mmlParser->VLFO.DeltaStart = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     if ((lfocom & 1) == 0)
     {
@@ -359,7 +360,7 @@ void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
 //    [$EC] + [WAVE※1] + [周期※2].w + [変移※3].w
 void MMLParser_C_ec_LFOPitchCtrl(struct MMLParser *mmlParser)
 {
-    uint8_t lfocom_f = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t lfocom_f = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (lfocom_f & 0x80)
     {
         if (lfocom_f & 0x01)
@@ -377,7 +378,7 @@ void MMLParser_C_ec_LFOPitchCtrl(struct MMLParser *mmlParser)
     lfocom &= 0x3;
     mmlParser->PLFO.Type = lfocom + 1;
     lfocom += lfocom;
-    uint16_t length = mmlParser->PLFO.Length = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    uint16_t length = mmlParser->PLFO.Length = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     if (lfocom != 2)
     {
@@ -388,7 +389,7 @@ void MMLParser_C_ec_LFOPitchCtrl(struct MMLParser *mmlParser)
         }
     }
     mmlParser->PLFO.LengthFixd = length;
-    int16_t delta = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    int16_t delta = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     int16_t delta_l = delta;
     if (lfocom_f >= 0x4)
@@ -419,7 +420,7 @@ void MMLParser_C_ec_LFOPitchCtrl(struct MMLParser *mmlParser)
 //    [$ED] + [???]                 Fコマンド対応
 void MMLParser_C_ed_NoisePitch(struct MMLParser *mmlParser)
 {
-    uint8_t noise = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t noise = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(0x0f, noise);
 }
 //・同期信号待機
@@ -432,21 +433,21 @@ void MMLParser_C_ee_SyncWait(struct MMLParser *mmlParser)
 //    [$EF] + [チャネル番号(0～15)]
 void MMLParser_C_ef_SyncSend(struct MMLParser *mmlParser)
 {
-    uint8_t sendch = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
-    MDXParser_SendSyncRelease(&mdx, sendch);
+    uint8_t sendch = MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    MDXParser_SendSyncRelease(sendch);
 }
 //・キーオンディレイ
 //    [$F0] + [???]                 kコマンド対応
 void MMLParser_C_f0_KeyOnDelay(struct MMLParser *mmlParser)
 {
-    mmlParser->KeyOnDelay = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    mmlParser->KeyOnDelay = MDXParser_ReadData8(mmlParser->CurrentAddr++);
 }
 //・データエンド
 //    [$F1] + [$00]                 演奏終了
 //    [$F1] + [ループポインタ].w    ポインタ位置から再演奏
 void MMLParser_C_f1_EndOfData(struct MMLParser *mmlParser)
 {
-    uint8_t off_u = (uint8_t)MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t off_u = (uint8_t)MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (off_u == 0x0)
     {
         mmlParser->StatusF |= FLG_HALT;
@@ -454,7 +455,7 @@ void MMLParser_C_f1_EndOfData(struct MMLParser *mmlParser)
     }
     else
     {
-        uint8_t off_l = (uint8_t)MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+        uint8_t off_l = (uint8_t)MDXParser_ReadData8(mmlParser->CurrentAddr++);
         uint16_t off = (uint16_t)off_u << 8 | (uint16_t)off_l;
         off = (off ^ 0xffff) + 1;
         mmlParser->CurrentAddr -= off;
@@ -465,7 +466,7 @@ void MMLParser_C_f1_EndOfData(struct MMLParser *mmlParser)
 // ※3  変移  1クロック毎の変化量。単位はデチューンの1/256
 void MMLParser_C_f2_Portamento(struct MMLParser *mmlParser)
 {
-    int16_t port = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    int16_t port = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     mmlParser->PortamentoDelta = port;
     for (int i = 0; i < 8; i++)
@@ -479,7 +480,7 @@ void MMLParser_C_f2_Portamento(struct MMLParser *mmlParser)
 //    [$F3] + [???].w               Dコマンド対応   １単位は（半音／６４）
 void MMLParser_C_f3_Detune(struct MMLParser *mmlParser)
 {
-    int16_t dt = MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    int16_t dt = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     mmlParser->Detune = dt;
 }
@@ -487,10 +488,10 @@ void MMLParser_C_f3_Detune(struct MMLParser *mmlParser)
 //    [$F4] + [終端コマンドへのオフセット+1].w
 void MMLParser_C_f4_ExitRepeat(struct MMLParser *mmlParser)
 {
-    int16_t off = (int16_t)MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr);
+    int16_t off = (int16_t)MDXParser_ReadData8(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     int16_t btmaddr = mmlParser->CurrentAddr + off;
-    int16_t btmoff = (int16_t)MDXParser_ReadData8(&mdx, btmaddr);
+    int16_t btmoff = (int16_t)MDXParser_ReadData8(btmaddr);
     btmaddr += 2;
     btmoff = (btmoff ^ 0xffff) + 1;
     int16_t tgtaddr = btmaddr - btmoff - 1;
@@ -514,7 +515,7 @@ void MMLParser_C_f4_ExitRepeat(struct MMLParser *mmlParser)
 //    [$F5] + [開始コマンドへのオフセット+2].w
 void MMLParser_C_f5_BottomRepeat(struct MMLParser *mmlParser)
 {
-    int16_t off = (int16_t)MDXParser_ReadData16(&mdx, mmlParser->CurrentAddr);
+    int16_t off = (int16_t)MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     off = (off ^ 0xffff) + 1;
     int16_t tgtaddr = mmlParser->CurrentAddr - off - 1;
@@ -543,7 +544,7 @@ void MMLParser_C_f5_BottomRepeat(struct MMLParser *mmlParser)
 //    [$F6] + [リピート回数] + [$00]
 void MMLParser_C_f6_StartRepeat(struct MMLParser *mmlParser)
 {
-    uint8_t count = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr);
+    uint8_t count = MDXParser_ReadData8(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     uint8_t i;
     for (i = 0; i < MMLParser_RepeatCnt; i++)
@@ -569,7 +570,7 @@ void MMLParser_C_f7_DisableKeyOn(struct MMLParser *mmlParser)
 void MMLParser_C_f8_KeyOnTime(struct MMLParser *mmlParser)
 {
     // 全音長の<num>÷8にあたる時間が経過した時点でキーオフします。
-    uint8_t length = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t length = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     if (length <= 8)
     {
         mmlParser->KeyLength = length * 8;
@@ -618,14 +619,14 @@ void MMLParser_C_fa_VolumeDown(struct MMLParser *mmlParser)
 //    [$FB] + [$80～$FF]            @vコマンド対応（ビット7無効）
 void MMLParser_C_fb_Volume(struct MMLParser *mmlParser)
 {
-    mmlParser->Volume = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    mmlParser->Volume = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     MMLParser_UpdateVolume(mmlParser);
 }
 //・出力位相設定
 //    [$FC] + [???]                 pコマンド対応
 void MMLParser_C_fc_Panpot(struct MMLParser *mmlParser)
 {
-    uint8_t pan = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t pan = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     mmlParser->RegPAN = pan;
     YM2151_setPanpot(mmlParser->Channel, mmlParser->RegPAN);
 }
@@ -634,12 +635,12 @@ void MMLParser_C_fc_Panpot(struct MMLParser *mmlParser)
 #define DUMP_TIMBRE
 void MMLParser_C_fd_Timbre(struct MMLParser *mmlParser)
 {
-    uint8_t tno = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
-    uint16_t taddr = MDXParser_GetTimbreAddr(&mdx, tno);
-    uint8_t no = MDXParser_ReadData8(&mdx, taddr++);
+    uint8_t tno = MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    uint16_t taddr = MDXParser_GetTimbreAddr(tno);
+    uint8_t no = MDXParser_ReadData8(taddr++);
     if (no != tno)
         ASSERT("TimbreNo Unmuch");
-    YM2151_loadTimbre(mmlParser->Channel, MDXParser_GetTimbreAddr(&mdx, tno) + mdx.DataBP);
+    YM2151_loadTimbre(mmlParser->Channel, MDXParser_GetTimbreAddr(tno) + mdxParser.DataBP);
     YM2151_setPanpot(mmlParser->Channel, mmlParser->RegPAN);
     MMLParser_UpdateVolume(mmlParser);
 }
@@ -648,27 +649,14 @@ void MMLParser_C_fd_Timbre(struct MMLParser *mmlParser)
 //    [$FE] + [レジスタ番号] + [出力データ]
 void MMLParser_C_fe_Registar(struct MMLParser *mmlParser)
 {
-    uint8_t reg = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
-    uint8_t data = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
+    uint8_t reg = MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    uint8_t data = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     YM2151_write(reg, data);
 }
 //・テンポ設定
 //    [$FF] + [???]                 @tコマンド対応
 void MMLParser_C_ff_Tempo(struct MMLParser *mmlParser)
 {
-    uint8_t tempo = MDXParser_ReadData8(&mdx, mmlParser->CurrentAddr++);
-    MDXParser_SetTempo(&mdx, tempo);
-}
-
-uint8_t MDXParser_ReadData8(struct MDXParser *mdxParser, uint16_t addr)
-{
-    return (uint8_t)(pgm_read_byte_near(mdxParser->DataBP + (addr)));
-}
-
-uint16_t MDXParser_ReadData16(struct MDXParser *mdxParser, uint16_t addr)
-{
-    uint16_t rdata = pgm_read_word_near(mdxParser->DataBP + (addr));
-    return (rdata << 8) | (rdata >> 8);
-    // printf("result 0x%04X\n", rdata);
-    // return rdata; 
+    uint8_t tempo = MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    MDXParser_SetTempo(tempo);
 }

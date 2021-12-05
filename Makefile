@@ -4,7 +4,7 @@ CFLAGSOLD = +rc2014 -subtype=none -vn -SO3 -O3 --opt-code-size -clib=sdcc_iy -pr
 CFLAGS = +cpm -DAMALLOC
 #-clib=sdcc_iy
 all:
-	$(CC) $(CFLAGS) --list $(SRCS) -o main -create-app
+	$(CC) $(CFLAGS) --list $(SRCS) -o main -create-app -m
 normal:
 	cc -g $(SRCS)
 docker:
