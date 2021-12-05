@@ -9,6 +9,7 @@
 #include "compat.h"
 #include "main.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,7 @@ char *buffer;
 int main(int argc, char **argv)
 {
     // char *buffer;
+    printf("MDXPLAY for RC2014\n");
 
     for (int i = 0; i < argc; ++i)
     {
@@ -31,9 +33,12 @@ int main(int argc, char **argv)
     YM2151_begin();
 
     // load file
-    readfileintoram(argv[1], buffer);
+    readfileintoram(argv[1], &buffer);
 
-    MDXParser_Setup(&mdx, 0x2800);
+
+    printf("BUffer 2 %d\n", buffer);
+
+    MDXParser_Setup(&mdx, 0);
     MDXParser_Elapse(&mdx, 0);
 
     while (1)
@@ -51,12 +56,18 @@ void loop()
     {
         if (waittime > 16)
         {
+            // __SCCZ80
+            #ifdef __SDCC
             msleep(16);
+            #endif
+
             waittime -= 16;
         }
         else
         {
+            #ifdef __SDCC
             msleep(waittime);
+            #endif
             waittime = 0;
         }
     }
@@ -65,13 +76,14 @@ void loop()
     //   proctime = micros() - proctime;
 }
 
-void readfileintoram(char *filename, char *buffer)
+void readfileintoram(char *filename, char **buffer)
 {
+    printf("Beginning file load\n");
     FILE *pFile;
     long lSize;
     size_t result;
 
-    pFile = fopen(filename, "r");
+    pFile = fopen(filename, "rb");
     if (pFile == NULL)
     {
         fputs("File error\n", stderr);
@@ -83,12 +95,13 @@ void readfileintoram(char *filename, char *buffer)
     lSize = ftell(pFile);      // get the current file pointer
     rewind(pFile);             // rewind to the beginning of the file
 
+    printf("File size %d\n", lSize);
     // allocate memory to contain the whole file:
     // add one more byte for the NULL character to
     // terminate the memory string
 
-    buffer = (char *)malloc(sizeof(char) * lSize + 1);
-    if (buffer == NULL)
+    char *newBuffer = (char *)malloc(sizeof(char) * lSize + 1);
+    if (newBuffer == NULL)
     {
         fputs("Memory error", stderr);
         return;
@@ -100,10 +113,11 @@ void readfileintoram(char *filename, char *buffer)
     // the lSize + 1 byte will be 0 which is NULL '\0'
     // note, we clear memory and add the NULL at the same time
 
-    memset(buffer, 0, sizeof(char) * lSize + 1);
+    memset(newBuffer, 0, sizeof(char) * lSize + 1);
 
     // copy the file into the buffer:
-    result = fread(buffer, sizeof(char), lSize, pFile);
+    result = fread(newBuffer, sizeof(char), lSize, pFile);
+    printf("result %d\n", result);
     if (result != lSize)
     {
         fputs("Reading error", stderr);
@@ -128,4 +142,7 @@ void readfileintoram(char *filename, char *buffer)
 
     fclose(pFile);
     // free(buffer);
+    printf("BUffer %d\n", newBuffer);
+    printf("Loading file finished\n");
+    *buffer = newBuffer;
 }

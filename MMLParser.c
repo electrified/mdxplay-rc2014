@@ -2,6 +2,7 @@
 #include "MMLParser.h"
 #include "MDXParser.h"
 #include "compat.h"
+#include <stdlib.h>
 
 const uint8_t MMLParser_RepeatCnt = 4;
 
@@ -142,7 +143,7 @@ void MMLParser_Calc(struct MMLParser *mmlParser)
             if (--mmlParser->VLFO.LengthCounter == 0)
             {
                 mmlParser->VLFO.LengthCounter = mmlParser->VLFO.Length;
-                mmlParser->VLFO.Offset = mmlParser->VLFO.Delta * random(255);
+                mmlParser->VLFO.Offset = mmlParser->VLFO.Delta * rand();
             }
             break;
         default:
@@ -186,7 +187,7 @@ void MMLParser_Calc(struct MMLParser *mmlParser)
             if (--mmlParser->PLFO.LengthCounter == 0)
             {
                 mmlParser->PLFO.LengthCounter = mmlParser->PLFO.Length;
-                mmlParser->PLFO.Offset = mmlParser->PLFO.Delta * random(255);
+                mmlParser->PLFO.Offset = mmlParser->PLFO.Delta * rand();
             }
             break;
         default:

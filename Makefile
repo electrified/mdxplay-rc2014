@@ -5,6 +5,8 @@ CFLAGS = +cpm -DAMALLOC
 #-clib=sdcc_iy
 all:
 	$(CC) $(CFLAGS) --list $(SRCS) -o main -create-app
+normal:
+	cc -g $(SRCS)
 docker:
 	docker run -v ${PWD}:/src/ --rm -it z88dk $(CC) $(CFLAGS) --list $(SRCS) -o main -create-app
 .PHONY clean:

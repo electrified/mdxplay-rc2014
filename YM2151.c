@@ -63,12 +63,11 @@ void YM2151_wait(uint8_t loop)
     for (wi = 0; wi < loop; wi++)
     {
 // 16MHz  nop = @60nSec
-#asm
-        nop
-            nop
-                nop
-                    nop
-#endasm
+asm("nop");
+asm("nop");
+asm("nop");
+asm("nop");
+asm("nop");
     }
 }
 
@@ -413,7 +412,7 @@ void YM2151_setTone(uint8_t ch, uint8_t keycode, int16_t kf)
         offset_note = 0xbf;
 
     YM2151_write(0x30 + ch, offset_kf << 2);
-    YM2151_write(0x28 + ch, pgm_read_byte_near(KeyCodeTable + offset_note));
+    YM2151_write(0x28 + ch, pgm_read_byte_near(*(KeyCodeTable + offset_note)));
 }
 /*! パンポットを設定する
 	\param ch				設定するチャンネル
