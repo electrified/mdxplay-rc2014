@@ -40,7 +40,8 @@ int main(int argc, char **argv)
     MDXParser_Setup(0);
     MDXParser_Elapse(0);
 
-    while (1)
+    // for (int i =0;i<100;++i)
+    while(1)
     {
         loop();
     }
@@ -56,9 +57,9 @@ void loop()
     //     if (waittime > 16)
     //     {
     //         // __SCCZ80
-    //         #ifdef __SDCC
-            msleep(16);
-    //         #endif
+            #ifdef __SCCZ80
+            msleep(1);
+            #endif
 
     //         waittime -= 16;
     //     }

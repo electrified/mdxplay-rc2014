@@ -11,14 +11,13 @@
 #define REG_SEL_PORT 0xFEu
 #define REG_DATA_PORT 0xFFu
 
-// #ifdef __SDCC
+#ifdef __SCCZ80
 __sfr __at REG_SEL_PORT REG_SEL;
 __sfr __at REG_DATA_PORT REG_DATA;
-// #else
-
-// unsigned char REG_SEL;
-// unsigned char REG_DATA;
-// #endif
+#else
+unsigned char REG_SEL;
+unsigned char REG_DATA;
+#endif
 
 struct YM2151 ym2151;
 
@@ -47,7 +46,7 @@ void YM2151_write(uint8_t addr, uint8_t data)
 			}
 		}
     }
-    printf("w: %02X %02X\n", addr, data); 
+    // printf("w: %X %X\n", addr, data); 
     REG_SEL = addr;
     REG_DATA = data;
     last_write_addr = addr;
@@ -108,7 +107,7 @@ void YM2151_loadTimbre(uint8_t ch, uint16_t prog_addr)
     ym2151.RegFLCON[ch] = pgm_read_byte_near(taddr++);
     ym2151.CarrierSlot[ch] = carrier_slot_tbl[ym2151.RegFLCON[ch] & 0x7];
     ym2151.RegSLOTMASK[ch] = pgm_read_byte_near(taddr++);
-
+    // printf("hello\n");
     for (int i = 0; i < 32; i += 8)
     {
         uint8_t dt1_mul = pgm_read_byte_near(taddr++);
@@ -242,6 +241,7 @@ void YM2151_dumpTimbre(uint16_t prog_addr)
  */
 void YM2151_setVolume(uint8_t ch, uint8_t volume, uint16_t offset)
 {
+    // printf("ch %X volume %X offset %X\n", ch, volume, offset);
     static uint8_t volume_tbl[] = {
         0x2a,
         0x28,
@@ -272,18 +272,23 @@ void YM2151_setVolume(uint8_t ch, uint8_t volume, uint16_t offset)
         tl = volume_tbl[volume];
     }
     tl += offset >> 8;
+        // printf("tl %X \n", tl);
     for (int i = 0; i < 4; i++)
     {
+        // printf("regtl %X\n", ym2151.RegTL[ch][i]);
         if (ym2151.CarrierSlot[ch] & (1 << i))
         {
+            // printf("1\n");
             att = ym2151.RegTL[ch][i] + tl;
         }
         else
         {
+            // printf("2\n");
             att = ym2151.RegTL[ch][i];
         }
         if (att > 0x7f || att < 0)
             att = 0x7f;
+        // printf("YM2151_setVolume\n");
         YM2151_write(0x60 + i * 8 + ch, att);
     }
 }
@@ -418,7 +423,7 @@ void YM2151_setTone(uint8_t ch, uint8_t keycode, int16_t kf)
         offset_note = 0xbf;
 
     YM2151_write(0x30 + ch, offset_kf << 2);
-    YM2151_write(0x28 + ch, pgm_read_byte_near(*(KeyCodeTable + offset_note)));
+    YM2151_write(0x28 + ch, KeyCodeTable[offset_note]);
 }
 /*! パンポットを設定する
 	\param ch				設定するチャンネル

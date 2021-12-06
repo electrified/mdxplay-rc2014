@@ -118,8 +118,10 @@ uint8_t MDXParser_ReadData8(uint16_t addr)
 
 uint16_t MDXParser_ReadData16(uint16_t addr)
 {
+    // printf("addr %X\n", addr);
     uint16_t rdata = pgm_read_word_near(mdxParser.DataBP + (addr));
-    return (rdata << 8) | (rdata >> 8);
-    // printf("result 0x%04X\n", rdata);
-    // return rdata; 
+    // printf("odata %X\n", rdata);
+    rdata = (rdata << 8) | (rdata >> 8);
+    // printf("rdata %X\n", rdata);
+    return rdata; 
 }

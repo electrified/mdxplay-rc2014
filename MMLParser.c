@@ -112,7 +112,7 @@ void MMLParser_Calc(struct MMLParser *mmlParser)
     }
     if (mmlParser->FunctionF & FLG_VLFO)
     {
-        uint16_t Delta;
+        // uint16_t Delta;
         switch (mmlParser->VLFO.Type)
         {
         case 0: // non op
@@ -152,11 +152,12 @@ void MMLParser_Calc(struct MMLParser *mmlParser)
             ASSERT("Unknown VLFO type!");
             break;
         }
+        // printf("MMLParser_Calc %d\n", mmlParser->VLFO.Type);
         MMLParser_UpdateVolume(mmlParser);
     }
     if (mmlParser->FunctionF & FLG_PLFO)
     {
-        uint16_t Delta;
+        // uint16_t Delta;
         switch (mmlParser->PLFO.Type)
         {
         case 0: // non op
@@ -294,10 +295,12 @@ void MMLParser_C_ea_LFOCtrl(struct MMLParser *mmlParser)
     {
         if (lfocom & 0x01)
         { // ??
+            // printf("MMLParser_C_ea_LFOCtrl1\n");
             YM2151_write(0x38 + mmlParser->Channel, mmlParser->RegPMSAMS);
         }
         else
         {
+            // printf("MMLParser_C_ea_LFOCtrl2\n");
             YM2151_write(0x38 + mmlParser->Channel, 0);
         }
         return;
@@ -338,6 +341,7 @@ void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
     mmlParser->VLFO.Length = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     DeltaFixd = mmlParser->VLFO.DeltaStart = MDXParser_ReadData16(mmlParser->CurrentAddr);
+    printf("DeltaFixd %x\n", DeltaFixd);
     mmlParser->CurrentAddr += 2;
     if ((lfocom & 1) == 0)
     {
@@ -351,7 +355,7 @@ void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
     mmlParser->VLFO.LengthCounter = mmlParser->VLFO.Length;
     mmlParser->VLFO.Delta = mmlParser->VLFO.DeltaStart;
     mmlParser->VLFO.Offset = mmlParser->VLFO.DeltaFixd;
-
+    // printf("MMLParser_C_eb_LFOVolumeCtrl offset set to %x", mmlParser->VLFO.Offset);
     mmlParser->FunctionF |= FLG_VLFO;
 }
 //・音程LFO制御
@@ -651,6 +655,7 @@ void MMLParser_C_fe_Registar(struct MMLParser *mmlParser)
 {
     uint8_t reg = MDXParser_ReadData8(mmlParser->CurrentAddr++);
     uint8_t data = MDXParser_ReadData8(mmlParser->CurrentAddr++);
+    // printf("MMLParser_C_fe_Registar\n");
     YM2151_write(reg, data);
 }
 //・テンポ設定
