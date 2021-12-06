@@ -31,8 +31,6 @@ int main(int argc, char **argv)
         printf("argv[%d]: %s\n", i, argv[i]);
     }
 
-    YM2151_begin();
-
     // load file
     readfileintoram(argv[1], &buffer);
 
@@ -59,7 +57,7 @@ void loop()
     //     {
     //         // __SCCZ80
     //         #ifdef __SDCC
-    //         msleep(16);
+            msleep(16);
     //         #endif
 
     //         waittime -= 16;

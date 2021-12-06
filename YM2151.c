@@ -22,12 +22,6 @@ __sfr __at REG_DATA_PORT REG_DATA;
 
 struct YM2151 ym2151;
 
-/*! IOの初期設定を行いYM2151/YM3012をハードリセットする、必ず呼ぶ必要あり
- */
-void YM2151_begin()
-{
-}
-
 #ifdef DIRECT_IO
 
 static uint8_t last_write_addr = 0x00;
@@ -53,7 +47,7 @@ void YM2151_write(uint8_t addr, uint8_t data)
 			}
 		}
     }
-    // printf("ym write: %d %d", addr, data); 
+    printf("w: %02X %02X\n", addr, data); 
     REG_SEL = addr;
     REG_DATA = data;
     last_write_addr = addr;

@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-void	YM2151_begin();
 void	YM2151_initLFO();
 uint8_t	YM2151_read();
 void	YM2151_write(uint8_t addr,uint8_t data);
