@@ -38,7 +38,7 @@ void YM2151_write(uint8_t addr, uint8_t data)
     {
         for(i=0;i<32;i++){
 
-			if(YM2151_read() & 0x80 == 0){	// Read Status
+			if((YM2151_read() & 0x80) == 0){	// Read Status
 				break;
 			}
 			if(i>16){
