@@ -15,6 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <im2.h>
+#include <intrinsic.h>
+// #include <z80.h>
+
 struct MDXParser mdxParser;
 
 int32_t waittime = 0;
@@ -34,18 +38,89 @@ int main(int argc, char **argv)
     // load file
     readfileintoram(argv[1], &buffer);
 
-
-    printf("BUffer 2 %d\n", buffer);
+    printf("Buffer 2 %d\n", buffer);
 
     MDXParser_Setup(0);
+    interrupt_setup();
     MDXParser_Elapse(0);
 
     // for (int i =0;i<100;++i)
-    while(1)
+    while (1)
     {
-        loop();
+        // loop();
     }
     return EXIT_SUCCESS;
+}
+
+// Initialize interrupts in IM2 mode
+#define IV_ADDR ((void *)0x5b00)
+#define ISR_ADDR ((void *)0x5c5c)
+#define IV_BYTE (0x5c)
+#define Z80_OPCODE_JP (0xc3)
+
+M_BEGIN_ISR(do_timer_tick)
+{
+    MDXParser_Elapse(1);
+    YM2151_write(0x14, 0b00010101);
+}
+M_END_ISR
+
+void interrupt_setup()
+{
+    // interaction with normal serial interrupts?
+    // whe interrupt recieved, call our function, determine if the ym was the cause of the interrupt, if not call the normal interrupt handler
+    // setup interrupt handler to call loop when ym interrupt fires
+
+    /*
+     1/60 = 0.016 seconds
+    = 16 milliseconds
+
+    1/50 = 0.2 = 20 milliseconds
+
+    Timer A period in ms = (64 * (1024 - NA) / clk in khz (3579.545))
+
+    Therefore longest time period achievable with timer a alone is 18ms (when all registers are 0)
+
+    Timer B is coarser but can have an interval of up to 73 ms @ 3.579Mhz
+
+
+*/
+    intrinsic_di();
+    im2_Init(IV_ADDR);
+    memset(IV_ADDR, IV_BYTE, 257);
+    bpoke(ISR_ADDR, Z80_OPCODE_JP);
+    wpoke(ISR_ADDR + 1, (uint16_t)do_timer_tick);
+    intrinsic_ei();
+
+    // program ym timer
+
+    // set CLKA1/ CLKA2 registers
+    YM2151_write(0x10, 0b01111111);
+    YM2151_write(0x11, 0b11);
+    // or set CLKB
+    //YM2151_write(0x12, 0);
+    // Set IRQ EN for given timer???
+
+    // load a 1 into the LOAD register to start the timer
+    // CSM | unused | flag reset B | flag reset A | IRQEN B | IRQEN A | LOAD B | LOAD A
+    YM2151_write(0x14, 0b00010101);
+}
+
+void interrupt_handler()
+{
+    // determine if interrupt originated from ym
+    // check IST register
+
+    if ((YM2151_read() & 1) == 1)
+    {
+        MDXParser_Elapse(1);
+        // reinitialise timers
+        YM2151_write(0x14, 0b00010101);
+    }
+    else
+    {
+        // call normal interrupt handler if not.
+    }
 }
 
 void loop()
@@ -57,9 +132,9 @@ void loop()
     //     if (waittime > 16)
     //     {
     //         // __SCCZ80
-            #ifdef __SCCZ80
-            msleep(1);
-            #endif
+#ifdef __SCCZ80
+    msleep(1);
+#endif
 
     //         waittime -= 16;
     //     }
@@ -99,7 +174,8 @@ void readfileintoram(char *filename, char **buffer)
     // allocate memory to contain the whole file:
     // add one more byte for the NULL character to
     // terminate the memory string
-    if(lSize == 0) {
+    if (lSize == 0)
+    {
         lSize = 16000;
     }
 
