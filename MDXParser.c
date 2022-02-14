@@ -75,7 +75,8 @@ uint16_t MDXParser_Elapse(uint16_t c)
 void MDXParser_SetTempo(uint8_t tempo)
 {
     mdxParser.Tempo = tempo;
-    mdxParser.ClockMicro = (1024 * (256 - mdxParser.Tempo)) / 4;
+    YM2151_write(0x12, tempo);
+    // mdxParser.ClockMicro = (1024 * (256 - mdxParser.Tempo)) / 4;
 }
 void MDXParser_SendSyncRelease(uint8_t ch)
 {
@@ -102,14 +103,14 @@ uint16_t MDXParser_GetTimbreAddr(uint8_t timbleno)
     ASSERT("can not find timbre");
     return 0;
 }
-uint32_t MDXParser_ClockToMilliSec(uint8_t clock)
-{
-    return ((uint32_t)clock * mdxParser.ClockMicro) / (uint32_t)1000;
-}
-uint32_t MDXParser_ClockToMicroSec(uint8_t clock)
-{
-    return ((uint32_t)clock * mdxParser.ClockMicro);
-}
+// uint32_t MDXParser_ClockToMilliSec(uint8_t clock)
+// {
+//     return ((uint32_t)clock * mdxParser.ClockMicro) / (uint32_t)1000;
+// }
+// uint32_t MDXParser_ClockToMicroSec(uint8_t clock)
+// {
+//     return ((uint32_t)clock * mdxParser.ClockMicro);
+// }
 
 uint8_t MDXParser_ReadData8(uint16_t addr)
 {

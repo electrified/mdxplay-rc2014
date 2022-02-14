@@ -41,13 +41,13 @@ int main(int argc, char **argv)
     printf("Buffer 2 %d\n", buffer);
 
     MDXParser_Setup(0);
-    interrupt_setup();
+    // interrupt_setup();
     MDXParser_Elapse(0);
 
     // for (int i =0;i<100;++i)
     while (1)
     {
-        // loop();
+        loop();
     }
     return EXIT_SUCCESS;
 }
@@ -60,8 +60,8 @@ int main(int argc, char **argv)
 
 M_BEGIN_ISR(do_timer_tick)
 {
+    YM2151_write(0x14, 0b00101010);
     MDXParser_Elapse(1);
-    YM2151_write(0x14, 0b00010101);
 }
 M_END_ISR
 
@@ -95,32 +95,18 @@ void interrupt_setup()
     // program ym timer
 
     // set CLKA1/ CLKA2 registers
-    YM2151_write(0x10, 0b01111111);
-    YM2151_write(0x11, 0b11);
+    // YM2151_write(0x10, 0b01111111);
+    // YM2151_write(0x11, 0b11);
+
+    // YM2151_write(0x10, 0b01111111);
+    // YM2151_write(0x11, 0b11);
     // or set CLKB
     //YM2151_write(0x12, 0);
     // Set IRQ EN for given timer???
 
     // load a 1 into the LOAD register to start the timer
     // CSM | unused | flag reset B | flag reset A | IRQEN B | IRQEN A | LOAD B | LOAD A
-    YM2151_write(0x14, 0b00010101);
-}
-
-void interrupt_handler()
-{
-    // determine if interrupt originated from ym
-    // check IST register
-
-    if ((YM2151_read() & 1) == 1)
-    {
-        MDXParser_Elapse(1);
-        // reinitialise timers
-        YM2151_write(0x14, 0b00010101);
-    }
-    else
-    {
-        // call normal interrupt handler if not.
-    }
+    YM2151_write(0x14, 0b00101010);
 }
 
 void loop()
