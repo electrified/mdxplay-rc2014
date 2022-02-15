@@ -19,7 +19,7 @@
 #include <intrinsic.h>
 // #include <z80.h>
 
-struct MDXParser mdxParser;
+// struct MDXParser mdxParser;
 
 int32_t waittime = 0;
 uint32_t proctime = 0;

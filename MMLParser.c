@@ -6,7 +6,7 @@
 
 const uint8_t MMLParser_RepeatCnt = 4;
 
-extern struct MDXParser mdxParser;
+extern uint16_t MDXDataBP;
 
 // ※クロックの１単位は全音符／１９２
 // typedef	void (MMLParser_ *CommandFunc)();
@@ -644,7 +644,7 @@ void MMLParser_C_fd_Timbre(struct MMLParser *mmlParser)
     uint8_t no = MDXParser_ReadData8(taddr++);
     if (no != tno)
         ASSERT("TimbreNo Unmuch");
-    YM2151_loadTimbre(mmlParser->Channel, MDXParser_GetTimbreAddr(tno) + mdxParser.DataBP);
+    YM2151_loadTimbre(mmlParser->Channel, MDXParser_GetTimbreAddr(tno) + MDXDataBP);
     YM2151_setPanpot(mmlParser->Channel, mmlParser->RegPAN);
     MMLParser_UpdateVolume(mmlParser);
 }

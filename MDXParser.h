@@ -5,16 +5,6 @@
 
 #define		MDXParser_ChNum 8
 
-struct	MDXParser{
-	uint16_t	DataBP;
-	uint16_t	BaseOffset;
-	uint16_t	TimbreOffset;
-	uint8_t		Tempo;
-	uint32_t	ClockMicro;
-	struct MMLParser OPMChannel[MDXParser_ChNum];
-};
-
-
 void		MDXParser_Setup(uint16_t bp) __z88dk_fastcall;
 uint16_t	MDXParser_Elapse(uint16_t c) __z88dk_fastcall;
 // uint16_t	MDXParser_Forward(uint16_t) __z88dk_fastcall;
