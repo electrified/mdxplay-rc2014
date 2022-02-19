@@ -6,10 +6,8 @@ uint16_t	MDXDataBP;
 uint16_t	MDXBaseOffset;
 uint16_t	MDXTimbreOffset;
 uint8_t		MDXTempo;
-uint32_t	MDXClockMicro;
+// uint32_t	MDXClockMicro;
 struct MMLParser MDXOPMChannel[MDXParser_ChNum];
-
-
 
 void MDXParser_Setup(uint16_t bp)
 {
@@ -28,6 +26,7 @@ void MDXParser_Setup(uint16_t bp)
     }
     YM2151_write(0x0f, 0);
 }
+
 uint16_t MDXParser_Elapse(uint16_t c)
 {
     uint8_t minclock = 0xff;
@@ -78,6 +77,7 @@ uint16_t MDXParser_Elapse(uint16_t c)
     }
     return minclock;
 }
+
 void MDXParser_SetTempo(uint8_t tempo)
 {
     MDXTempo = tempo;
@@ -120,7 +120,7 @@ uint16_t MDXParser_GetTimbreAddr(uint8_t timbleno)
 
 uint8_t MDXParser_ReadData8(uint16_t addr)
 {
-    return (uint8_t)(pgm_read_byte_near(MDXDataBP + (addr)));
+    return pgm_read_byte_near(MDXDataBP + (addr));
 }
 
 uint16_t MDXParser_ReadData16(uint16_t addr)

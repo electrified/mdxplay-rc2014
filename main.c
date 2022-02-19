@@ -17,9 +17,8 @@
 
 #include <im2.h>
 #include <intrinsic.h>
-// #include <z80.h>
 
-// struct MDXParser mdxParser;
+#define USE_INTERRUPTS
 
 int32_t waittime = 0;
 uint32_t proctime = 0;
@@ -41,13 +40,19 @@ int main(int argc, char **argv)
     printf("Buffer 2 %d\n", buffer);
 
     MDXParser_Setup(0);
-    // interrupt_setup();
+
+    #ifdef USE_INTERRUPTS
+    interrupt_setup();
+    #endif
+
     MDXParser_Elapse(0);
 
     // for (int i =0;i<100;++i)
     while (1)
     {
+        #ifndef USE_INTERRUPTS
         loop();
+        #endif
     }
     return EXIT_SUCCESS;
 }
@@ -60,8 +65,11 @@ int main(int argc, char **argv)
 
 M_BEGIN_ISR(do_timer_tick)
 {
-    YM2151_write(0x14, 0b00101010);
-    MDXParser_Elapse(1);
+    // has timer elapsed?
+    if((YM2151_read() & 0x2) == 0x2) {
+        YM2151_write(0x14, 0b00101010);
+        MDXParser_Elapse(1);
+    }
 }
 M_END_ISR
 

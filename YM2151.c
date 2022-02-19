@@ -34,18 +34,18 @@ void YM2151_write(uint8_t addr, uint8_t data)
     uint8_t i;
     // addr 0x20へのアクセスの後busyフラグが落ちなくなる病 '86の石だと発生
     // 他のレジスタに書くまで落ちないので、強引だが0x20アクセス後ならチェックしない
-    // if (last_write_addr != 0x20)
-    // {
-    //     for(i=0;i<32;i++){
+    if (last_write_addr != 0x20)
+    {
+        for(i=0;i<32;i++){
 
-	// 		if((YM2151_read() & 0x80) == 0){	// Read Status
-	// 			break;
-	// 		}
-	// 		if(i>16){
-	// 			YM2151_wait(1);
-	// 		}
-	// 	}
-    // }
+			if((YM2151_read() & 0x80) == 0){	// Read Status
+				break;
+			}
+			if(i>16){
+				YM2151_wait(1);
+			}
+		}
+    }
     // printf("w: %X %X\n", addr, data); 
     REG_SEL = addr;
     REG_DATA = data;

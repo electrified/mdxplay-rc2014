@@ -341,7 +341,7 @@ void MMLParser_C_eb_LFOVolumeCtrl(struct MMLParser *mmlParser)
     mmlParser->VLFO.Length = MDXParser_ReadData16(mmlParser->CurrentAddr);
     mmlParser->CurrentAddr += 2;
     DeltaFixd = mmlParser->VLFO.DeltaStart = MDXParser_ReadData16(mmlParser->CurrentAddr);
-    printf("DeltaFixd %x\n", DeltaFixd);
+    // printf("DeltaFixd %x\n", DeltaFixd);
     mmlParser->CurrentAddr += 2;
     if ((lfocom & 1) == 0)
     {
