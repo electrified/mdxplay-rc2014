@@ -41,11 +41,11 @@ int main(int argc, char **argv)
 
     MDXParser_Setup(0);
 
+    MDXParser_Elapse(0);
+
     #ifdef USE_INTERRUPTS
     interrupt_setup();
     #endif
-
-    MDXParser_Elapse(0);
 
     // for (int i =0;i<100;++i)
     while (1)

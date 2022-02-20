@@ -13,7 +13,7 @@ void MDXParser_Setup(uint16_t bp)
 {
     uint16_t tableaddr = 0;
     MDXDataBP = bp;
-    MDXParser_SetTempo(100);
+    MDXParser_SetTempo(200);
     while (MDXParser_ReadData8(tableaddr++) != 0)
         ;
     MDXBaseOffset = tableaddr;
@@ -24,6 +24,8 @@ void MDXParser_Setup(uint16_t bp)
         MMLParser_Init(&MDXOPMChannel[i], i, MDXBaseOffset, MDXParser_ReadData16(tableaddr));
         tableaddr += 2;
     }
+
+    // Reset NE and NFRQ
     YM2151_write(0x0f, 0);
 }
 
