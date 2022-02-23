@@ -242,7 +242,13 @@ void MMLParser_KeyOff(struct MMLParser *mmlParser)
 void MMLParser_SetTone(struct MMLParser *mmlParser)
 {
     int16_t offset;
-    offset = mmlParser->Detune + 128;
+
+    // TODO: switch based on oscillator freqency
+    // for 3.579MHz
+    // offset = mmlParser->Detune + 128;
+    // for 4Mhz
+    offset = mmlParser->Detune;
+
     if (mmlParser->FunctionF & FLG_MPT)
     {
         offset += mmlParser->Portamento >> 16; // 右シフトは問題なし
