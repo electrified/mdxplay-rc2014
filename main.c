@@ -73,26 +73,28 @@ M_BEGIN_ISR(do_timer_tick)
 }
 M_END_ISR
 
+/**
+ * @brief Sets up the interupts.
+ * 
+ * Uses the timers within the YM2151.
+ * 
+ * Test of newline breaks
+ * 
+ * 1/60 = 0.016 seconds = 16 milliseconds
+ * 1/50 = 0.2 = 20 milliseconds
+ * 
+ * Timer A period in ms = (64 * (1024 - NA) / clk in khz (3579.545))
+ * Therefore longest time period achievable with timer a alone is 18ms (when all registers are 0)
+ * Timer B is coarser but can have an interval of up to 73 ms @ 3.579Mhz
+ * 
+ * @return void
+ */
 void interrupt_setup()
 {
     // interaction with normal serial interrupts?
     // whe interrupt recieved, call our function, determine if the ym was the cause of the interrupt, if not call the normal interrupt handler
     // setup interrupt handler to call loop when ym interrupt fires
 
-    /*
-     1/60 = 0.016 seconds
-    = 16 milliseconds
-
-    1/50 = 0.2 = 20 milliseconds
-
-    Timer A period in ms = (64 * (1024 - NA) / clk in khz (3579.545))
-
-    Therefore longest time period achievable with timer a alone is 18ms (when all registers are 0)
-
-    Timer B is coarser but can have an interval of up to 73 ms @ 3.579Mhz
-
-
-*/
     intrinsic_di();
     im2_Init(IV_ADDR);
     memset(IV_ADDR, IV_BYTE, 257);
@@ -117,6 +119,10 @@ void interrupt_setup()
     YM2151_write(0x14, 0b00101010);
 }
 
+/**
+ * @brief Main loop. Not really used when using interrupts
+ * 
+ */
 void loop()
 {
     // waittime = MDXParser_ClockToMilliSec(1);

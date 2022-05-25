@@ -1,0 +1,3 @@
+- [ ] Fix interrupt issues and get working on RomWBW
+- [ ] Progressively load tunes into memory so longer tunes can be played
+- [ ] Ensure timing is correct
